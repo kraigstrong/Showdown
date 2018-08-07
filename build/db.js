@@ -13,6 +13,9 @@ class Db {
     async read(key) {
     }
     async write(key, value) {
+        console.log("writing to db now");
+        await this.db.write(key, value);
     }
 }
 exports.Db = Db;
+//# sourceMappingURL=db.js.map
