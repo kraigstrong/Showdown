@@ -22,18 +22,29 @@ router.post('/api/player', async function addPlayer (ctx, next) {
     await db.write(player_name, fields)
     ctx.status = 200
     ctx.body =  {update: "update successful"}
+    ctx.response.redirect("/add")
 });
-router.get('/', async function home (ctx, next) {
+router.get('/add', async function add (ctx, next) {
     ctx.body = `
-    <h1>hello world</h1>
+    <h1>Add a player here</h1>
     <form method="POST" action="/api/player">
-    Player Name: <input type="text" name="name"/> <br/>
-    Speed: <input type="text" name="speed"/> <br/>
-    On Base: <input type="text" name="onBase"/> <br/>
-    <button type="submit"> Submit </button>
+        Player Name: <input type="text" name="name"/> <br/>
+        Speed: <input type="number" name="speed"/> <br/>
+        On Base: <input type="number" name="onBase"/> <br/>
+        <button type="submit"> Submit </button>
     </form>
+    <a href='/'>Home</a>
     `
     ctx.headers["content-type"] = "text/html"
+    ctx.status = 200
+})
+router.get('/', async function home (ctx, next) {
+    ctx.body = `
+    <h1>Home</h1>
+    <a href='/add'>Add a Player</a>
+    `
+    ctx.headers["content-type"] = "text/html"
+    ctx.status = 200
 })
 
 app
@@ -43,7 +54,7 @@ app
         await next()
     })
     .use(router.routes())
-    //.use(router.allowedMethods());
+    .use(router.allowedMethods());
 
 async function start(){
     console.log("starting")
