@@ -15,6 +15,7 @@ export class Db {
 
     }
     async write(key: string, value: string|number) {
-
+        console.log("writing to db now")
+        await this.db.write(key, value)
     }
 }
