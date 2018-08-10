@@ -29,13 +29,11 @@ router.get('/add', async function add (ctx, next) {
     <h1>Add a player here</h1>
     <form method="POST" action="/api/player">
         Player Name: <input type="text" name="name"/> <br/>
-        Speed: <input type="text" name="speed"/> <br/>
-        On Base: <input type="text" name="onBase"/> <br/>
+        Speed: <input type="number" name="speed"/> <br/>
+        On Base: <input type="number" name="onBase"/> <br/>
         <button type="submit"> Submit </button>
     </form>
-    <form action="/">
-        <button onclick="/">Home</button>
-    </form>
+    <a href='/'>Home</a>
     `
     ctx.headers["content-type"] = "text/html"
     ctx.status = 200
@@ -43,9 +41,7 @@ router.get('/add', async function add (ctx, next) {
 router.get('/', async function home (ctx, next) {
     ctx.body = `
     <h1>Home</h1>
-    <form action="/add">
-    <button type="Submit"> Add Player </button>
-    </form>
+    <a href='/add'>Add a Player</a>
     `
     ctx.headers["content-type"] = "text/html"
     ctx.status = 200
