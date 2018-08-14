@@ -17,6 +17,7 @@
     "typescript": "^3.0.1"
   },
   "scripts": {
-    "start": "nodemon build/index.js"
+    "start": "nodemon build/index.js",
+    "db_init": "cd build && node db_load.js"
   }
 }
