@@ -1,22 +1,27 @@
 {
-  "name": "webdev",
-  "version": "1.0.0",
-  "main": "index.js",
-  "license": "MIT",
+  "name": "showdown",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "cards": "node scripts/build-cards.mjs"
+  },
   "dependencies": {
-    "koa": "^2.5.2",
-    "koa-bodyparser": "^4.2.1",
-    "koa-router": "^7.4.0",
-    "toiletdb": "^1.4.1"
+    "@fontsource/barlow": "^5.3.0",
+    "@fontsource/barlow-condensed": "^5.3.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@types/koa": "^2.0.46",
-    "@types/koa-bodyparser": "^5.0.1",
-    "@types/koa-router": "^7.0.31",
-    "nodemon": "^1.18.3",
-    "typescript": "^3.0.1"
-  },
-  "scripts": {
-    "start": "nodemon build/index.js"
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
   }
 }
