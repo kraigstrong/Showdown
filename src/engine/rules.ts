@@ -1,7 +1,16 @@
 // Small, pure rule lookups shared by the engine and the screens.
-import type { CardPosition, Chart, FieldSlot, HitterCard, LineupSlot, PitcherCard, PitcherLine, SwingResult } from './types';
+import type { CardPosition, FieldSlot, GameCard, HitterCard, LineupSlot, PitcherCard, PitcherLine, SwingResult } from './types';
 
-export const CHART_ORDER: SwingResult[] = ['PU', 'SO', 'GB', 'FB', 'BB', '1B', '1B+', '2B', '3B', 'HR'];
+const CHART_ORDER: SwingResult[] = ['PU', 'SO', 'GB', 'FB', 'BB', '1B', '1B+', '2B', '3B', 'HR'];
+// The 2000 cards print strikeouts above pop-ups; from 2001 on it's the other way around.
+const CHART_ORDER_2000: SwingResult[] = ['SO', 'PU', 'GB', 'FB', 'BB', '1B', '1B+', '2B', '3B', 'HR'];
+
+export function chartOrder(year: number): SwingResult[] {
+  return year === 2000 ? CHART_ORDER_2000 : CHART_ORDER;
+}
+
+type ChartedCard = Pick<GameCard, 'chart' | 'year'>;
+
 export const FIELD_SLOTS: FieldSlot[] = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
 export const LINEUP_SLOTS: LineupSlot[] = [...FIELD_SLOTS, 'DH'];
 export const INFIELD: FieldSlot[] = ['1B', '2B', '3B', 'SS'];
@@ -13,11 +22,11 @@ export interface ChartRange {
   to: number;
 }
 
-export function chartRanges(chart: Chart): ChartRange[] {
+export function chartRanges(card: ChartedCard): ChartRange[] {
   const ranges: ChartRange[] = [];
   let next = 1;
-  for (const result of CHART_ORDER) {
-    const count = chart[result] ?? 0;
+  for (const result of chartOrder(card.year)) {
+    const count = card.chart[result] ?? 0;
     if (count > 0) {
       ranges.push({ result, from: next, to: next + count - 1 });
       next += count;
@@ -26,8 +35,8 @@ export function chartRanges(chart: Chart): ChartRange[] {
   return ranges;
 }
 
-export function resultForRoll(chart: Chart, roll: number): SwingResult {
-  const range = chartRanges(chart).find((r) => roll >= r.from && roll <= r.to);
+export function resultForRoll(card: ChartedCard, roll: number): SwingResult {
+  const range = chartRanges(card).find((r) => roll >= r.from && roll <= r.to);
   if (!range) throw new Error(`No chart result for a roll of ${roll}`);
   return range.result;
 }
@@ -66,4 +75,9 @@ export function speedLetter(speed: number): string {
   if (speed >= 18) return 'A';
   if (speed >= 13) return 'B';
   return 'C';
+}
+
+/** Speed as the card prints it: a letter through 2001, the number from 2002 on. */
+export function speedLabel(card: Pick<HitterCard, 'speed' | 'year'>): string {
+  return card.year >= 2002 ? String(card.speed) : speedLetter(card.speed);
 }

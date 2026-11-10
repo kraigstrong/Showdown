@@ -7,13 +7,12 @@ const SIDES: Side[] = ['away', 'home'];
 export function Scoreboard({ state }: { state: GameState }) {
   const innings = Math.max(9, state.inning);
   const over = state.phase.kind === 'over';
-  const started = state.phase.kind !== 'rotation';
   return (
     <section className="scoreboard" aria-label="Scoreboard">
       <div className="scoreboard__grid" style={{ '--innings': innings } as React.CSSProperties}>
         <div className="sb-cell sb-cell--team sb-cell--head" />
         {Array.from({ length: innings }, (_, i) => (
-          <div key={i} className={`sb-cell sb-cell--head ${!over && started && i + 1 === state.inning ? 'is-now' : ''}`}>
+          <div key={i} className={`sb-cell sb-cell--head ${!over && i + 1 === state.inning ? 'is-now' : ''}`}>
             {i + 1}
           </div>
         ))}
@@ -22,7 +21,7 @@ export function Scoreboard({ state }: { state: GameState }) {
 
         {SIDES.map((side) => {
           const team = state.teams[side];
-          const batting = started && !over && (side === 'away') === (state.half === 'top');
+          const batting = !over && (side === 'away') === (state.half === 'top');
           return [
             <div key={`${side}-name`} className={`sb-cell sb-cell--team ${batting ? 'is-batting' : ''}`} title={team.name}>
               <span className="sb-full">{team.name}</span>
@@ -33,7 +32,7 @@ export function Scoreboard({ state }: { state: GameState }) {
               const skipped = over && side === 'home' && i + 1 === state.inning && played === undefined;
               return (
                 <div key={`${side}-${i}`} className="sb-cell sb-cell--inning">
-                  {skipped ? 'X' : started ? played ?? '' : ''}
+                  {skipped ? 'X' : played ?? ''}
                 </div>
               );
             }),
@@ -47,8 +46,8 @@ export function Scoreboard({ state }: { state: GameState }) {
         })}
       </div>
       <div className="scoreboard__status">
-        <span className="scoreboard__inning">{over ? 'Final' : started ? inningLabel(state) : 'Pregame'}</span>
-        {started && !over && (
+        <span className="scoreboard__inning">{over ? 'Final' : inningLabel(state)}</span>
+        {!over && (
           <span className="outs" aria-label={`${state.outs} out`}>
             <span className="outs__label">Outs</span>
             {[0, 1, 2].map((n) => (

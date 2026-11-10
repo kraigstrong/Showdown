@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { ALL_CARDS, CARDS_BY_ID, TEAMS, YEARS } from '../data/catalog';
-import { fieldingAt, speedLetter } from '../engine';
+import { fieldingAt, speedLabel } from '../engine';
 import type { GameCard, HitterCard, PitcherCard } from '../engine';
 import {
   autoFill,
@@ -62,7 +62,7 @@ function nextOpenTarget(draft: TeamDraft): Target {
 
 function cardSummary(card: GameCard): string {
   if (card.kind === 'hitter') {
-    return `OB ${card.onBase} · ${speedLetter(card.speed)} · ${card.positions.map((p) => p.pos).join('/')}`;
+    return `OB ${card.onBase} · ${speedLabel(card)} · ${card.positions.map((p) => p.pos).join('/')}`;
   }
   return `C ${card.control} · IP ${card.ip} · ${card.role}`;
 }
@@ -87,7 +87,7 @@ export function RosterEditor({ draft, sideLabel, onChange, onDone }: Props) {
   const usedPlayers = useMemo(() => new Set(draftCardIds(draft).map((id) => CARDS_BY_ID[id].playerId)), [draft]);
   const update = (next: TeamDraft) => {
     // Any hand edit makes this a custom team, so the cap and the four starters apply.
-    onChange(withFullRotation({ ...next, capExempt: false }));
+    onChange(withFullRotation({ ...next, capExempt: false, savedTeam: undefined }));
   };
 
   const matches = useMemo(() => {

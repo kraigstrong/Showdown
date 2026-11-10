@@ -27,7 +27,14 @@ function loadSavedGame(): GameState | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const state = JSON.parse(raw) as GameState;
-    return state.version === 1 ? state : null;
+    if (state.version !== 1) return null;
+    // Saved before starters were picked on the setup screen and the game hadn't begun.
+    if ((state.phase.kind as string) === 'rotation') return null;
+    // Saved before stolen bases were kept.
+    for (const team of Object.values(state.teams)) {
+      for (const line of Object.values(team.batting)) line.sb ??= 0;
+    }
+    return state;
   } catch {
     return null;
   }

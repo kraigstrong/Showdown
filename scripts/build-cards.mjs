@@ -1,9 +1,20 @@
 // Turns the raw card snapshot into the card list the game ships with.
-// Scope is the regular 2000 and 2001 sets. Run with: npm run cards
+// Scope is the regular 2000 and 2001 sets, plus the few later cards our saved
+// teams use. Run with: npm run cards
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const YEARS = new Set(['2000', '2001']);
 const SETS = new Set(['BS', 'PR']);
+
+// Cards from other years that a saved team in src/teams/savedTeams.ts plays with.
+// They stay out of the card pool for building and random teams.
+const OTHER_YEAR_CARDS = new Set([
+  '2002-BS-186', // Richie Sexson
+  '2002-BS-301', // Jeff Nelson
+  '2003-BS-266', // Jamie Moyer
+  '2003-BS-268', // Joel Pineiro
+  '2004-TD-63', // Rafael Soriano
+]);
 const CHART_COLUMNS = ['PU', 'SO', 'GB', 'FB', 'BB', '1B', '1B+', '2B', '3B', 'HR'];
 const ROLES = { STARTER: 'Starter', RELIEVER: 'Reliever', CLOSER: 'Closer' };
 
@@ -58,8 +69,15 @@ function readChart(row, id) {
   let total = 0;
   for (const column of CHART_COLUMNS) {
     const value = Number(row[column]);
-    if (!Number.isInteger(value) || value < 0 || value > 20) {
+    if (!Number.isInteger(value) || value < 0) {
       throw new Error(`${id}: ${column} is ${row[column]}, expected a count from 0 to 20`);
+    }
+    if (value > 20) {
+      // From 2002 a number past 20 is the roll where that result starts. We play
+      // without anything that adds to the swing, so the chart stops at 20 and
+      // those results are dropped.
+      if (Number(row.Set) < 2002) throw new Error(`${id}: ${column} is ${row[column]}, expected a count from 0 to 20`);
+      continue;
     }
     if (value > 0) chart[column] = value;
     total += value;
@@ -77,41 +95,46 @@ function readPositions(row) {
   return positions;
 }
 
-const rows = parseCsv(readFileSync('raw_data/wotc_cards.csv', 'utf8'));
-const cards = rows
-  .filter((row) => YEARS.has(row.Set) && SETS.has(row.Expansion))
-  .map((row) => {
-    const id = `${row.Set}-${row.Expansion}-${row['Set Number']}`;
-    const base = {
-      id,
-      playerId: row['BRef Id'],
-      name: row.Name,
-      year: Number(row.Set),
-      set: row.Expansion,
-      number: Number(row['Set Number']),
-      team: row.Team,
-      points: Number(row.Points),
-      hand: row.Hand,
-      foil: row['Is Foil'] === 'Y',
-      chart: readChart(row, id),
-    };
-    if (row['Player Type'] === 'Pitcher') {
-      return {
-        ...base,
-        kind: 'pitcher',
-        control: Number(row.Command),
-        ip: Number(row.IP),
-        role: ROLES[row.Position1],
-      };
-    }
+const cardId = (row) => `${row.Set}-${row.Expansion}-${row['Set Number']}`;
+
+function toCard(row) {
+  const id = cardId(row);
+  const base = {
+    id,
+    playerId: row['BRef Id'],
+    name: row.Name,
+    year: Number(row.Set),
+    set: row.Expansion,
+    number: Number(row['Set Number']),
+    team: row.Team,
+    points: Number(row.Points),
+    hand: row.Hand,
+    foil: row['Is Foil'] === 'Y',
+    chart: readChart(row, id),
+  };
+  if (row['Player Type'] === 'Pitcher') {
     return {
       ...base,
-      kind: 'hitter',
-      onBase: Number(row.Command),
-      speed: Number(row.Speed),
-      positions: readPositions(row),
+      kind: 'pitcher',
+      control: Number(row.Command),
+      ip: Number(row.IP),
+      role: ROLES[row.Position1],
     };
-  });
+  }
+  return {
+    ...base,
+    kind: 'hitter',
+    onBase: Number(row.Command),
+    speed: Number(row.Speed),
+    positions: readPositions(row),
+  };
+}
+
+const rows = parseCsv(readFileSync('raw_data/wotc_cards.csv', 'utf8'));
+const cards = rows.filter((row) => YEARS.has(row.Set) && SETS.has(row.Expansion)).map(toCard);
+const otherYears = rows.filter((row) => OTHER_YEAR_CARDS.has(cardId(row))).map(toCard);
+const missing = [...OTHER_YEAR_CARDS].filter((id) => !otherYears.some((card) => card.id === id));
+if (missing.length > 0) throw new Error(`Not in the snapshot: ${missing.join(', ')}`);
 
 for (const card of cards) {
   FIXES[card.id]?.(card);
@@ -119,6 +142,8 @@ for (const card of cards) {
   if (card.id === '2001-PR-99') card.name = "D'Angelo Jimenez";
 }
 
-cards.sort((a, b) => a.year - b.year || a.set.localeCompare(b.set) || a.number - b.number);
-writeFileSync('src/data/cards.json', `[\n${cards.map((c) => JSON.stringify(c)).join(',\n')}\n]\n`);
-console.log(`Wrote ${cards.length} cards to src/data/cards.json`);
+const byNumber = (a, b) => a.year - b.year || a.set.localeCompare(b.set) || a.number - b.number;
+const asJson = (list) => `[\n${list.map((c) => JSON.stringify(c)).join(',\n')}\n]\n`;
+writeFileSync('src/data/cards.json', asJson(cards.sort(byNumber)));
+writeFileSync('src/data/other-years.json', asJson(otherYears.sort(byNumber)));
+console.log(`Wrote ${cards.length} cards to src/data/cards.json and ${otherYears.length} to src/data/other-years.json`);

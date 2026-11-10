@@ -1,4 +1,4 @@
-import { currentBatterId, offenseSide, speedLetter } from '../engine';
+import { currentBatterId, offenseSide, speedLabel } from '../engine';
 import type { GameState, HitterCard, PitcherCard, Side } from '../engine';
 import { inningsPitched } from './describe';
 
@@ -24,6 +24,7 @@ export function BoxScore({ state }: { state: GameState }) {
                     <th>RBI</th>
                     <th>BB</th>
                     <th>SO</th>
+                    <th>SB</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -39,6 +40,7 @@ export function BoxScore({ state }: { state: GameState }) {
                         <td>{line.rbi}</td>
                         <td>{line.bb}</td>
                         <td>{line.so}</td>
+                        <td>{line.sb}</td>
                       </tr>
                     );
                   })}
@@ -86,7 +88,7 @@ export function BoxScore({ state }: { state: GameState }) {
 }
 
 export function LineupsPanel({ state }: { state: GameState }) {
-  const inPlay = state.phase.kind !== 'rotation' && state.phase.kind !== 'over';
+  const inPlay = state.phase.kind !== 'over';
   const batterId = inPlay ? currentBatterId(state) : null;
   const batting = offenseSide(state);
   return (
@@ -106,7 +108,7 @@ export function LineupsPanel({ state }: { state: GameState }) {
                     <span className="lineup__slot">{entry.slot}</span>
                     <span className="lineup__name">{card.name}</span>
                     <span className="lineup__stats">
-                      OB {card.onBase} · {speedLetter(card.speed)}
+                      OB {card.onBase} · {speedLabel(card)}
                     </span>
                   </li>
                 );

@@ -26,7 +26,7 @@ interface Props {
 }
 
 export function Field({ state, scoring, banner, children }: Props) {
-  const inPlay = state.phase.kind !== 'rotation' && state.phase.kind !== 'over';
+  const inPlay = state.phase.kind !== 'over';
   const side = offenseSide(state);
   const phase = state.phase;
   // While runners are being sent, the batter's turn at the plate is already over.

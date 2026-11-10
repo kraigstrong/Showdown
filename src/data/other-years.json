@@ -1,0 +1,7 @@
+[
+{"id":"2002-BS-186","playerId":"sexsori01","name":"Richie Sexson","year":2002,"set":"BS","number":186,"team":"MIL","points":260,"hand":"R","foil":false,"chart":{"SO":5,"GB":1,"BB":4,"1B":5,"2B":1,"HR":4},"kind":"hitter","onBase":10,"speed":13,"positions":[{"pos":"1B","fielding":0}]},
+{"id":"2002-BS-301","playerId":"nelsoje01","name":"Jeff Nelson","year":2002,"set":"BS","number":301,"team":"SEA","points":260,"hand":"R","foil":false,"chart":{"PU":2,"SO":8,"GB":4,"FB":3,"BB":3},"kind":"pitcher","control":5,"ip":1,"role":"Reliever"},
+{"id":"2003-BS-266","playerId":"moyerja01","name":"Jamie Moyer","year":2003,"set":"BS","number":266,"team":"SEA","points":540,"hand":"L","foil":false,"chart":{"PU":2,"SO":4,"GB":5,"FB":5,"BB":1,"1B":2,"2B":1},"kind":"pitcher","control":5,"ip":7,"role":"Starter"},
+{"id":"2003-BS-268","playerId":"pineijo01","name":"Joel Pineiro","year":2003,"set":"BS","number":268,"team":"SEA","points":300,"hand":"R","foil":true,"chart":{"PU":1,"SO":4,"GB":7,"FB":4,"BB":1,"1B":2,"2B":1},"kind":"pitcher","control":4,"ip":5,"role":"Starter"},
+{"id":"2004-TD-63","playerId":"soriara01","name":"Rafael Soriano","year":2004,"set":"TD","number":63,"team":"SEA","points":240,"hand":"R","foil":true,"chart":{"PU":2,"SO":7,"GB":4,"FB":4,"BB":1,"1B":2},"kind":"pitcher","control":5,"ip":1,"role":"Reliever"}
+]

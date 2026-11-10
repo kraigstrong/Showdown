@@ -120,7 +120,7 @@ export function doublePlayNumbers(s: GameState): { bonus: number; target: number
 // ---------------------------------------------------------------- setup
 
 function emptyBatterLine(): BatterLine {
-  return { ab: 0, r: 0, h: 0, hr: 0, rbi: 0, bb: 0, so: 0 };
+  return { ab: 0, r: 0, h: 0, hr: 0, rbi: 0, bb: 0, so: 0, sb: 0 };
 }
 
 function emptyPitcherLine(): PitcherLine {
@@ -130,6 +130,8 @@ function emptyPitcherLine(): PitcherLine {
 function createTeam(setup: TeamSetup, runsByInning: number[]): TeamState {
   const batting: Record<string, BatterLine> = {};
   for (const entry of setup.lineup) batting[entry.cardId] = emptyBatterLine();
+  const starterId = setup.starterId && setup.rotation.includes(setup.starterId) ? setup.starterId : setup.rotation[0];
+  if (!starterId) throw new Error(`${setup.name} has no starting pitcher`);
   return {
     name: setup.name,
     code: setup.code,
@@ -138,19 +140,20 @@ function createTeam(setup: TeamSetup, runsByInning: number[]): TeamState {
     rotation: [...setup.rotation],
     bullpen: [...setup.bullpen],
     bench: [...setup.bench],
-    pitcherId: null,
-    starterId: null,
+    pitcherId: starterId,
+    starterId,
     batting,
-    pitching: {},
-    pitchersUsed: [],
+    pitching: { [starterId]: emptyPitcherLine() },
+    pitchersUsed: [starterId],
     battersUsed: setup.lineup.map((entry) => entry.cardId),
     runsByInning,
     hits: 0,
   };
 }
 
+/** A new game, already at the first pitch: each manager picked a starter before the game. */
 export function createGame(setup: GameSetup): GameState {
-  return {
+  const s: GameState = {
     version: 1,
     rng: setup.seed >>> 0,
     cards: setup.cards,
@@ -159,12 +162,15 @@ export function createGame(setup: GameSetup): GameState {
     half: 'top',
     outs: 0,
     bases: [null, null, null],
-    phase: { kind: 'rotation' },
+    phase: { kind: 'pitch' },
     atBat: { phUsed: false, pitchingChangeUsed: false },
     singlePlusRunner: null,
     log: [],
     winner: null,
   };
+  s.log.push({ t: 'starters', away: s.teams.away.pitcherId as string, home: s.teams.home.pitcherId as string });
+  startHalf(s);
+  return s;
 }
 
 // ---------------------------------------------------------------- dice
@@ -274,8 +280,6 @@ export function getPrompt(s: GameState): Prompt | null {
   const defense = defenseSide(s);
   const phase = s.phase;
   switch (phase.kind) {
-    case 'rotation':
-      return { actor: 'home', phase: phase.kind, actions: [{ type: 'ROLL' }] };
     case 'offense':
       return {
         actor: offense,
@@ -536,6 +540,8 @@ function resolveThrow(s: GameState, phase: Extract<Phase, { kind: 'throw' }>) {
       recordOut(s);
       continue;
     }
+    // Every runner who makes it on a steal, including the trail runner on a double steal, gets one.
+    if (phase.play === 'steal') s.teams[offenseSide(s)].batting[attempt.runnerId].sb += 1;
     if (attempt.to === HOME) scoreRun(s, attempt.runnerId, phase.play !== 'steal');
     else s.bases[attempt.to] = attempt.runnerId;
     if (attempt !== targetAttempt) {
@@ -565,20 +571,6 @@ function startThrow(s: GameState, play: ThrowPlay, attempts: Attempt[], twoOutsB
 function applyRoll(s: GameState) {
   const phase = s.phase;
   switch (phase.kind) {
-    case 'rotation': {
-      const roll = rollD20(s);
-      const slot = Math.min(3, Math.floor((roll - 1) / 5));
-      for (const side of ['away', 'home'] as const) {
-        const team = s.teams[side];
-        const id = team.rotation[slot % team.rotation.length];
-        team.pitcherId = id;
-        team.starterId = id;
-        team.pitching[id] = emptyPitcherLine();
-        team.pitchersUsed.push(id);
-      }
-      s.log.push({ t: 'rotation', roll, slot, away: s.teams.away.pitcherId as string, home: s.teams.home.pitcherId as string });
-      return startHalf(s);
-    }
     case 'pitch': {
       const pitcherId = currentPitcherId(s);
       const batterId = currentBatterId(s);
@@ -596,8 +588,7 @@ function applyRoll(s: GameState) {
       const pitcherId = currentPitcherId(s);
       const batterId = currentBatterId(s);
       const roll = rollD20(s);
-      const chart = phase.on === 'pitcher' ? s.cards[pitcherId].chart : s.cards[batterId].chart;
-      const result = resultForRoll(chart, roll);
+      const result = resultForRoll(phase.on === 'pitcher' ? s.cards[pitcherId] : s.cards[batterId], roll);
       s.log.push({ t: 'swing', roll, on: phase.on, result, batterId, pitcherId, side: offenseSide(s) });
       return applySwing(s, result);
     }

@@ -89,12 +89,14 @@ function act(s: GameState, action: Action, roll?: number): GameState {
 
 const ROLL: Action = { type: 'ROLL' };
 
-function newGame(overrides: { away?: Record<string, Partial<HitterCard>>; home?: Record<string, Partial<HitterCard>> } = {}) {
+function newGame(
+  overrides: { away?: Record<string, Partial<HitterCard>>; home?: Record<string, Partial<HitterCard>> } = {},
+  starters: { away?: string; home?: string } = {},
+) {
   const cards: Record<string, GameCard> = {};
-  const away = buildTeam('a', cards, overrides.away);
-  const home = buildTeam('h', cards, overrides.home);
-  const s = createGame({ away, home, cards, seed: 1 });
-  return act(s, ROLL, 1); // Rotation roll: first starters.
+  const away = { ...buildTeam('a', cards, overrides.away), starterId: starters.away };
+  const home = { ...buildTeam('h', cards, overrides.home), starterId: starters.home };
+  return createGame({ away, home, cards, seed: 1 });
 }
 
 function setChart(s: GameState, id: string, chart: Chart): GameState {
@@ -121,18 +123,30 @@ function lastOf<T extends GameState['log'][number]['t']>(s: GameState, t: T) {
 // ---------------------------------------------------------------- charts
 
 describe('charts', () => {
-  const chart: Chart = { SO: 2, GB: 3, FB: 2, BB: 4, '1B': 6, '1B+': 1, '2B': 1, HR: 1 };
+  const card = { year: 2001, chart: { SO: 2, GB: 3, FB: 2, BB: 4, '1B': 6, '1B+': 1, '2B': 1, HR: 1 } as Chart };
 
   it('stacks results in card order', () => {
-    expect(chartRanges(chart)[0]).toEqual({ result: 'SO', from: 1, to: 2 });
-    expect(chartRanges(chart).at(-1)).toEqual({ result: 'HR', from: 20, to: 20 });
+    expect(chartRanges(card)[0]).toEqual({ result: 'SO', from: 1, to: 2 });
+    expect(chartRanges(card).at(-1)).toEqual({ result: 'HR', from: 20, to: 20 });
   });
 
   it('finds the result for every roll', () => {
-    expect(resultForRoll(chart, 1)).toBe('SO');
-    expect(resultForRoll(chart, 3)).toBe('GB');
-    expect(resultForRoll(chart, 18)).toBe('1B+');
-    expect(resultForRoll(chart, 20)).toBe('HR');
+    expect(resultForRoll(card, 1)).toBe('SO');
+    expect(resultForRoll(card, 3)).toBe('GB');
+    expect(resultForRoll(card, 18)).toBe('1B+');
+    expect(resultForRoll(card, 20)).toBe('HR');
+  });
+
+  it('puts strikeouts above pop-ups in 2000 and below them in 2001', () => {
+    const chart: Chart = { PU: 2, SO: 4, GB: 14 };
+    expect(chartRanges({ year: 2000, chart }).slice(0, 2)).toEqual([
+      { result: 'SO', from: 1, to: 4 },
+      { result: 'PU', from: 5, to: 6 },
+    ]);
+    expect(chartRanges({ year: 2001, chart }).slice(0, 2)).toEqual([
+      { result: 'PU', from: 1, to: 2 },
+      { result: 'SO', from: 3, to: 6 },
+    ]);
   });
 });
 
@@ -147,6 +161,31 @@ describe('positions', () => {
 
   it('lets any hitter DH', () => {
     expect(fieldingAt(hitter('x', 'C'), 'DH')).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------- starting pitchers
+
+describe('starting pitchers', () => {
+  it('starts with the ace on the mound and the first pitch waiting, no roll needed', () => {
+    const s = newGame();
+    expect(s.teams.away.pitcherId).toBe('aSP1');
+    expect(s.teams.home.pitcherId).toBe('hSP1');
+    expect(s.phase).toEqual({ kind: 'pitch' });
+    expect(s.log[0]).toEqual({ t: 'starters', away: 'aSP1', home: 'hSP1' });
+  });
+
+  it("uses each manager's pick from the rotation", () => {
+    const s = newGame({}, { away: 'aSP3', home: 'hSP2' });
+    expect(s.teams.away.pitcherId).toBe('aSP3');
+    expect(s.teams.away.starterId).toBe('aSP3');
+    expect(s.teams.away.pitchersUsed).toEqual(['aSP3']);
+    expect(s.teams.home.pitcherId).toBe('hSP2');
+    expect(s.teams.home.pitching.hSP2.innings).toBe(1);
+  });
+
+  it('falls back to the ace if the pick is not in the rotation', () => {
+    expect(newGame({}, { away: 'aRP' }).teams.away.pitcherId).toBe('aSP1');
   });
 });
 
@@ -423,6 +462,24 @@ describe('stealing', () => {
     expect(lastOf(caught, 'throw').out).toBe(true);
     expect(caught.outs).toBe(1);
     expect(caught.bases).toEqual([null, null, null]);
+  });
+
+  it('credits a stolen base in the box score only when the runner is safe', () => {
+    let s = place(newGame(), ['a1B', null, null]);
+    s = act(s, { type: 'STEAL', from: [0] });
+    expect(act(s, ROLL, 1).teams.away.batting.a1B.sb).toBe(1);
+    expect(act(s, ROLL, 20).teams.away.batting.a1B.sb).toBe(0);
+  });
+
+  it('credits both runners on a successful double steal, and only the safe one otherwise', () => {
+    let s = place(newGame(), ['a1B', 'a2B', null]);
+    s = { ...s, phase: { kind: 'offense' } };
+    s = act(s, { type: 'STEAL', from: [1, 0] });
+    s = act(s, { type: 'AIM', from: 1 });
+    const safe = act(s, ROLL, 1);
+    expect([safe.teams.away.batting.a2B.sb, safe.teams.away.batting.a1B.sb]).toEqual([1, 1]);
+    const caught = act(s, ROLL, 20);
+    expect([caught.teams.away.batting.a2B.sb, caught.teams.away.batting.a1B.sb]).toEqual([0, 1]);
   });
 
   it('adds +5 to the throw when stealing third', () => {

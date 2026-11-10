@@ -18,6 +18,7 @@ import { Die } from './Die';
 import { Field } from './Field';
 import { Scoreboard } from './Scoreboard';
 import { useGamePlayer } from './useGamePlayer';
+import { Wordmark } from './Wordmark';
 
 interface Props {
   session: GameSession;
@@ -122,13 +123,12 @@ export function GameScreen({ session, onExit, onRematch }: Props) {
   const [confirmExit, setConfirmExit] = useState(false);
 
   const prompt = getPrompt(view);
-  const started = view.phase.kind !== 'rotation';
   const over = view.phase.kind === 'over';
 
   const offense = offenseSide(view);
   const defense = defenseSide(view);
-  const batterId = started && !over ? currentBatterId(view) : null;
-  const pitcherId = started && !over ? currentPitcherId(view) : null;
+  const batterId = !over ? currentBatterId(view) : null;
+  const pitcherId = !over ? currentPitcherId(view) : null;
 
   // After a swing, keep the highlighted card up until the next pitch comes in.
   const shownBatterId = lastSwing?.batterId ?? batterId;
@@ -136,12 +136,12 @@ export function GameScreen({ session, onExit, onRematch }: Props) {
   const swingOn = view.phase.kind === 'swing' ? view.phase.on : lastSwing?.on ?? null;
 
   const actorSide: Side | null = prompt?.actor ?? null;
-  const fatigue = started && !over && !lastSwing ? currentFatigue(view) : 0;
+  const fatigue = !over && !lastSwing ? currentFatigue(view) : 0;
 
   return (
     <div className="game">
       <header className="game__bar">
-        <h1 className="wordmark">Showdown</h1>
+        <Wordmark />
         <div className="game__tools">
           {confirmExit ? (
             <>
@@ -168,7 +168,7 @@ export function GameScreen({ session, onExit, onRematch }: Props) {
               fatigue={fatigue}
             />
           ) : (
-            <div className="card card--placeholder">{over ? 'Ball game.' : 'Starting pitchers are set by the first roll.'}</div>
+            <div className="card card--placeholder">Ball game.</div>
           )}
         </div>
 
@@ -206,7 +206,7 @@ export function GameScreen({ session, onExit, onRematch }: Props) {
               roll={lastSwing?.on === 'batter' ? lastSwing.roll : null}
             />
           ) : (
-            <div className="card card--placeholder">{over ? 'Ball game.' : 'Visitors bat first.'}</div>
+            <div className="card card--placeholder">Ball game.</div>
           )}
         </div>
       </main>

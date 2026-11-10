@@ -52,6 +52,8 @@ export interface TeamSetup {
   lineup: { cardId: string; slot: LineupSlot }[];
   /** Starters in rotation order. Four for a built team; a real team may have fewer. */
   rotation: string[];
+  /** The manager's pick to start this game, from the rotation. Defaults to the first starter. */
+  starterId?: string;
   bullpen: string[];
   bench: string[];
 }
@@ -77,6 +79,7 @@ export interface BatterLine {
   rbi: number;
   bb: number;
   so: number;
+  sb: number;
 }
 
 export interface PitcherLine {
@@ -120,7 +123,6 @@ export interface Attempt {
 export type ThrowPlay = 'hit' | 'fly' | 'steal';
 
 export type Phase =
-  | { kind: 'rotation' }
   | { kind: 'offense' }
   | { kind: 'pitch' }
   | { kind: 'swing'; on: 'pitcher' | 'batter' }
@@ -131,7 +133,7 @@ export type Phase =
   | { kind: 'over' };
 
 export type GameEvent =
-  | { t: 'rotation'; roll: number; slot: number; away: string; home: string }
+  | { t: 'starters'; away: string; home: string }
   | { t: 'half'; inning: number; half: Half }
   | {
       t: 'pitch';

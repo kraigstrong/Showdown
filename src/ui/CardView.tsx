@@ -1,32 +1,28 @@
 import { teamColor, TEAMS_BY_CODE } from '../data/catalog';
-import { chartRanges, speedLetter } from '../engine';
+import { chartOrder, chartRanges, speedLabel } from '../engine';
 import type { GameCard, SwingResult } from '../engine';
 
-function resultGroup(result: SwingResult): string {
-  switch (result) {
-    case 'PU':
-    case 'SO':
-    case 'GB':
-    case 'FB':
-      return 'out';
-    case 'BB':
-      return 'walk';
-    case '1B':
-    case '1B+':
-      return 'single';
-    case '2B':
-    case '3B':
-      return 'extra';
-    case 'HR':
-      return 'homer';
-  }
-}
+const RESULT_LABELS: Record<SwingResult, string> = {
+  PU: 'Out(PU)',
+  SO: 'Out(SO)',
+  GB: 'Out(GB)',
+  FB: 'Out(FB)',
+  BB: 'Walk',
+  '1B': 'Single',
+  '1B+': 'Single+',
+  '2B': 'Double',
+  '3B': 'Triple',
+  HR: 'Homer',
+};
 
-function positionsText(card: GameCard): string {
-  if (card.kind === 'pitcher') return card.role;
-  return card.positions
-    .map(({ pos, fielding }) => (pos === 'DH' ? 'DH' : `${pos} +${fielding}`))
-    .join(' · ');
+const SET_SIZES: Record<string, number> = { '2000-BS': 462, '2000-PR': 150, '2001-BS': 462, '2001-PR': 175 };
+
+/** Rows in the order the card prints them, with a dash for results it doesn't have. */
+function chartRows(card: GameCard) {
+  const ranges = chartRanges(card);
+  return chartOrder(card.year)
+    .filter((result) => (card.kind === 'hitter' ? result !== 'PU' : result !== '1B+' && result !== '3B'))
+    .map((result) => ({ result, range: ranges.find((r) => r.result === result) }));
 }
 
 function rangeText(from: number, to: number): string {
@@ -43,68 +39,73 @@ interface Props {
   fatigue?: number;
   /** Small words above the card, like "At bat". */
   caption?: string;
-  compact?: boolean;
 }
 
-export function CardView({ card, active, roll, fatigue = 0, caption, compact }: Props) {
-  const ranges = chartRanges(card.chart);
+/** A card laid out like the 2000 set, with a team-color field where the photo would be. */
+export function CardView({ card, active, roll, fatigue = 0, caption }: Props) {
   const team = TEAMS_BY_CODE[card.team];
-  const faces = ranges.flatMap((range) =>
-    Array.from({ length: range.to - range.from + 1 }, (_, i) => ({ face: range.from + i, result: range.result })),
-  );
+  const setSize = SET_SIZES[`${card.year}-${card.set}`];
+  const positions = card.kind === 'hitter' ? card.positions : [];
   return (
-    <article
-      className={`card ${active ? 'card--active' : ''} ${compact ? 'card--compact' : ''}`}
-      style={{ '--team': teamColor(card.team), '--team-accent': team?.accent ?? '#c4ced4' } as React.CSSProperties}
-    >
+    <article className={`card ${active ? 'card--active' : ''}`} style={{ '--team': teamColor(card.team) } as React.CSSProperties}>
       {caption && <div className="card__caption">{caption}</div>}
-      <header className="card__head">
-        <span className="card__team">{team ? `${team.city} ${team.name}` : card.team}</span>
-        <span className="card__edition">
-          {card.year} {card.set === 'PR' ? 'Pennant Run' : 'Base'} · {card.number}
-        </span>
-        <h3 className="card__name">{card.name}</h3>
-      </header>
+      <div className="card__face" aria-label={`${card.name}, ${team ? `${team.city} ${team.name}` : card.team}, ${card.year}`}>
+        <svg className="card__watermark" viewBox="0 0 100 100" aria-hidden="true">
+          <circle cx="50" cy="50" r="46" />
+          <path d="M22 13 Q46 50 22 87 M78 13 Q54 50 78 87" />
+        </svg>
+        <span className="card__ghost" aria-hidden="true">{card.team}</span>
+        <div className="card__brand">MLB Showdown</div>
+        <div className="card__strip">
+          <h3 className="card__name">{card.name}</h3>
+        </div>
 
-      <div className="card__stats">
-        <div className="stat stat--lead">
-          <strong>{card.kind === 'hitter' ? card.onBase : card.control}</strong>
-          <span>{card.kind === 'hitter' ? 'On-Base' : 'Control'}</span>
+        <div className="card__plates">
+          <div className="plate plate--lead">
+            <span className="plate__word">{card.kind === 'hitter' ? 'On-Base' : 'Control'}</span>
+            <span className="ball">{card.kind === 'hitter' ? card.onBase : card.control}</span>
+          </div>
+          {card.kind === 'hitter' ? (
+            <>
+              <div className="plate">
+                Speed {speedLabel(card)} <i>|</i> {card.hand}
+              </div>
+              {positions.map(({ pos, fielding }) => (
+                <div className="plate" key={pos}>
+                  {pos === 'DH' ? 'DH' : `${pos} +${fielding}`}
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              <div className="plate">{card.role}</div>
+              <div className="plate">
+                {card.hand}HP <i>|</i> IP {card.ip}
+              </div>
+            </>
+          )}
+          <div className="plate plate--points">{card.points} pt.</div>
+          {fatigue > 0 && <div className="plate plate--tired">Tired −{fatigue}</div>}
         </div>
-        <div className="stat">
-          <strong>{card.kind === 'hitter' ? speedLetter(card.speed) : card.ip}</strong>
-          <span>{card.kind === 'hitter' ? 'Speed' : 'IP'}</span>
-        </div>
-        <div className="stat">
-          <strong>{card.hand}</strong>
-          <span>{card.kind === 'hitter' ? 'Bats' : 'Throws'}</span>
-        </div>
-        <div className="stat">
-          <strong>{card.points}</strong>
-          <span>Points</span>
+
+        <div className="card__badge" title={team ? `${team.city} ${team.name}` : card.team}>{card.team}</div>
+
+        <dl className="card__chart">
+          {chartRows(card).map(({ result, range }) => {
+            const hit = range !== undefined && roll !== null && roll !== undefined && roll >= range.from && roll <= range.to;
+            return (
+              <div key={result} className={`chart__row ${hit ? 'is-hit' : ''}`}>
+                <dd>{range ? rangeText(range.from, range.to) : '—'}</dd>
+                <dt>{RESULT_LABELS[result]}</dt>
+              </div>
+            );
+          })}
+        </dl>
+
+        <div className="card__number">
+          {setSize ? `${String(card.number).padStart(3, '0')}/${setSize}` : `${card.year} · ${String(card.number).padStart(3, '0')}`}
         </div>
       </div>
-      <p className="card__positions">
-        {positionsText(card)}
-        {fatigue > 0 && <span className="tired">Tired −{fatigue}</span>}
-      </p>
-
-      <div className="strip" aria-hidden="true">
-        {faces.map(({ face, result }) => (
-          <span key={face} className={`strip__cell group-${resultGroup(result)} ${roll === face ? 'is-hit' : ''}`} />
-        ))}
-      </div>
-      <dl className="chart">
-        {ranges.map((range) => {
-          const hit = roll !== null && roll !== undefined && roll >= range.from && roll <= range.to;
-          return (
-            <div key={range.result} className={`chart__row group-${resultGroup(range.result)} ${hit ? 'is-hit' : ''}`}>
-              <dt>{range.result}</dt>
-              <dd>{rangeText(range.from, range.to)}</dd>
-            </div>
-          );
-        })}
-      </dl>
     </article>
   );
 }

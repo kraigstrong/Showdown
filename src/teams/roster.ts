@@ -11,8 +11,10 @@ export const BENCH_COST_DIVISOR = 5;
 export interface TeamDraft {
   name: string;
   code?: string;
-  /** A real team plays with its own cards, so the point cap doesn't apply. */
+  /** A real or saved team plays with its own cards, so the point cap doesn't apply. */
   capExempt: boolean;
+  /** Set while this is one of our saved teams, untouched. */
+  savedTeam?: string;
   lineup: { slot: LineupSlot; cardId: string | null }[];
   rotation: (string | null)[];
   bullpen: string[];
@@ -197,6 +199,7 @@ const DRAFT_BENCH = 4;
 export function autoFill(draft: TeamDraft, random: () => number = Math.random): TeamDraft {
   const next = withFullRotation(structuredClone(draft));
   next.capExempt = false;
+  delete next.savedTeam;
   const used = new Set(draftCardIds(next).map((id) => CARDS_BY_ID[id].playerId));
   const openLineup = next.lineup.filter((entry) => !entry.cardId);
   const openStarters = next.rotation.filter((id) => !id).length;

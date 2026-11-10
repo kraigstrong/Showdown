@@ -6,7 +6,7 @@ import {
   doublePlayNumbers,
   hitterCard,
   pitcherCard,
-  speedLetter,
+  speedLabel,
   throwNumbers,
 } from '../engine';
 import type { Action, Attempt, GameEvent, GameState, Phase, SwingResult } from '../engine';
@@ -53,10 +53,8 @@ export function inningLabel(s: Pick<GameState, 'inning' | 'half'>): string {
 
 export function eventLine(s: GameState, e: GameEvent): string | null {
   switch (e.t) {
-    case 'rotation': {
-      const slot = ordinal(e.slot + 1);
-      return `Rolled ${e.roll}: the ${slot} starters pitch, ${nameOf(s, e.away)} and ${nameOf(s, e.home)}.`;
-    }
+    case 'starters':
+      return `Starting pitchers: ${nameOf(s, e.away)} for ${s.teams.away.name}, ${nameOf(s, e.home)} for ${s.teams.home.name}.`;
     case 'half':
       return null;
     case 'pitch': {
@@ -94,8 +92,6 @@ export function eventLine(s: GameState, e: GameEvent): string | null {
 /** The short instruction above the choices. */
 export function promptTitle(s: GameState): string {
   switch (s.phase.kind) {
-    case 'rotation':
-      return 'Roll to set the starting pitchers';
     case 'offense':
       return `${nameOf(s, currentBatterId(s))} is up. Any moves first?`;
     case 'pitch':
@@ -126,8 +122,6 @@ function throwTitle(s: GameState, phase: Extract<Phase, { kind: 'throw' }>): str
 export function promptDetail(s: GameState): string | null {
   const phase = s.phase;
   switch (phase.kind) {
-    case 'rotation':
-      return 'Both teams start the same spot in their rotation: 1–5 first, 6–10 second, 11–15 third, 16–20 fourth.';
     case 'pitch': {
       const pitcher = pitcherCard(s, currentPitcherId(s));
       const batter = hitterCard(s, currentBatterId(s));
@@ -170,7 +164,6 @@ export function choiceText(s: GameState, action: Action): ChoiceText {
   switch (action.type) {
     case 'ROLL': {
       const labels: Partial<Record<Phase['kind'], string>> = {
-        rotation: 'Roll',
         pitch: 'Roll the pitch',
         swing: 'Roll the swing',
         doublePlay: 'Roll the throw',
@@ -222,7 +215,7 @@ export function choiceText(s: GameState, action: Action): ChoiceText {
     }
     case 'PINCH_HIT': {
       const card = hitterCard(s, action.cardId);
-      return { label: card.name, detail: `On-Base ${card.onBase}, Speed ${speedLetter(card.speed)}` };
+      return { label: card.name, detail: `On-Base ${card.onBase}, Speed ${speedLabel(card)}` };
     }
     case 'CHANGE_PITCHER': {
       const card = pitcherCard(s, action.cardId);
