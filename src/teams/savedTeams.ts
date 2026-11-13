@@ -10,8 +10,11 @@ export interface SavedTeam {
   name: string;
   /** Real-team code for colors. */
   code?: string;
-  /** In batting order. */
-  lineup: { slot: LineupSlot; cardId: string }[];
+  /**
+   * In batting order. A spot can be platooned: whoever of cardId and platoonWith
+   * bats from the other side of the opposing starter plays, the other sits.
+   */
+  lineup: { slot: LineupSlot; cardId: string; platoonWith?: string }[];
   /** Starters in rotation order; the first one is the default pick to start. */
   rotation: string[];
   bullpen: string[];
@@ -25,14 +28,14 @@ export const SAVED_TEAMS: SavedTeam[] = [
     code: 'SEA',
     lineup: [
       { slot: 'RF', cardId: '2001-PR-169' }, // 2001 Ichiro Suzuki
-      { slot: 'SS', cardId: '2001-BS-397' }, // 2001 Alex Rodriguez (SEA)
-      { slot: 'LF', cardId: '2000-BS-156' }, // 2000 Larry Walker
-      { slot: 'CF', cardId: '2000-BS-391' }, // 2000 Ken Griffey Jr. (SEA)
       { slot: 'DH', cardId: '2000-BS-396' }, // 2000 Edgar Martinez
-      { slot: '2B', cardId: '2001-BS-125' }, // 2001 Roberto Alomar
-      { slot: '3B', cardId: '2000-BS-236' }, // 2000 Jeff Cirillo (base set, MIL)
-      { slot: 'C', cardId: '2000-BS-395' }, // 2000 Tom Lampkin
+      { slot: 'CF', cardId: '2000-BS-391' }, // 2000 Ken Griffey Jr. (SEA)
+      { slot: 'LF', cardId: '2000-BS-156' }, // 2000 Larry Walker
+      { slot: 'SS', cardId: '2001-BS-397' }, // 2001 Alex Rodriguez (SEA)
       { slot: '1B', cardId: '2002-BS-186' }, // 2002 Richie Sexson
+      { slot: '2B', cardId: '2001-BS-125' }, // 2001 Roberto Alomar
+      { slot: 'C', cardId: '2000-BS-395' }, // 2000 Tom Lampkin
+      { slot: '3B', cardId: '2000-BS-236' }, // 2000 Jeff Cirillo (base set, MIL)
     ],
     rotation: [
       '2000-BS-24', // 2000 Randy Johnson
@@ -82,6 +85,38 @@ export const SAVED_TEAMS: SavedTeam[] = [
     ],
     bench: [],
   },
+  {
+    id: 'hanging-chads',
+    name: 'Hanging Chads',
+    lineup: [
+      { slot: '2B', cardId: '2000-BS-326' }, // 2000 Randy Velarde
+      { slot: 'SS', cardId: '2000-BS-301' }, // 2000 Derek Jeter
+      { slot: 'RF', cardId: '2000-BS-455' }, // 2000 Shawn Green (base set, TOR)
+      { slot: 'DH', cardId: '2000-BS-347' }, // 2000 Brian Giles
+      { slot: '1B', cardId: '2001-BS-145' }, // 2001 Todd Helton
+      { slot: '3B', cardId: '2002-BS-228' }, // 2002 Tino Martinez (base set, NYY), a 1B card: infield, +0 at 3B
+      { slot: 'CF', cardId: '2001-BS-306' }, // 2001 Bernie Williams
+      { slot: 'C', cardId: '2001-BS-303' }, // 2001 Jorge Posada
+      // 2000 Paul O'Neill (L) against right-handers, 2000 Chad Curtis (R) against lefties
+      { slot: 'LF', cardId: '2000-BS-306', platoonWith: '2000-BS-298' },
+    ],
+    rotation: [
+      '2000-BS-220', // 2000 Kevin Brown
+      '2002-BS-231', // 2002 Andy Pettitte
+      '2001-BS-57', // 2001 Mike Mussina (base set, BAL)
+      '2002-PR-75', // 2002 Kazuhisa Ishii (Pennant Run; there's no base-set card)
+      '2000-BS-5', // 2000 Chuck Finley (base set, ANA)
+    ],
+    bullpen: [
+      '2000-BS-376', // 2000 Alan Embree
+      '2002-BS-64', // 2002 Jeff Fassero
+      '2002-BS-181', // 2002 Chad Fox
+      '2002-BS-233', // 2002 Mariano Rivera
+      '2001-PR-45', // 2001 Dan Miceli
+      '2001-PR-69', // 2001 Lance Painter
+    ],
+    bench: [],
+  },
 ];
 
 export const SAVED_TEAMS_BY_ID: Record<string, SavedTeam> = Object.fromEntries(SAVED_TEAMS.map((team) => [team.id, team]));
@@ -93,9 +128,10 @@ export function savedTeamDraft(team: SavedTeam): TeamDraft {
     code: team.code,
     capExempt: true,
     savedTeam: team.id,
-    lineup: team.lineup.map((entry) => ({ ...entry })),
+    lineup: team.lineup.map(({ slot, cardId }) => ({ slot, cardId })),
     rotation: [...team.rotation],
     bullpen: [...team.bullpen],
-    bench: [...team.bench],
+    bench: [...team.bench, ...team.lineup.flatMap((entry) => (entry.platoonWith ? [entry.platoonWith] : []))],
+    platoons: team.lineup.flatMap((entry) => (entry.platoonWith ? [[entry.cardId, entry.platoonWith] as [string, string]] : [])),
   };
 }
