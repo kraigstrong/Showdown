@@ -59,6 +59,16 @@ export function fieldingAt(card: HitterCard, slot: LineupSlot): number | null {
   return best;
 }
 
+/**
+ * His Fielding where he actually plays. Off his card he takes the Expert rule for
+ * first base, at any spot: -1, or -2 if his card has no fielding position at all.
+ */
+export function fieldingIn(card: HitterCard, slot: LineupSlot): number {
+  const fielding = fieldingAt(card, slot);
+  if (fielding !== null) return fielding;
+  return card.positions.some((p) => p.pos !== 'DH') ? -1 : -2;
+}
+
 /** The penalty on every pitch: 1 for each inning past the pitcher's IP. */
 export function fatigueOf(card: PitcherCard, line: Pick<PitcherLine, 'innings'>): number {
   return Math.max(0, line.innings - card.ip);

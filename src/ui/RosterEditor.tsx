@@ -86,7 +86,7 @@ export function RosterEditor({ draft, sideLabel, onChange, onDone }: Props) {
   const issues = draftIssues(draft);
   const usedPlayers = useMemo(() => new Set(draftCardIds(draft).map((id) => CARDS_BY_ID[id].playerId)), [draft]);
   const update = (next: TeamDraft) => {
-    // Any hand edit makes this a custom team, so the cap and the four starters apply.
+    // Any hand edit makes this a custom team, so positions and the four starters apply.
     onChange(withFullRotation({ ...next, capExempt: false, savedTeam: undefined }));
   };
 
@@ -161,7 +161,7 @@ export function RosterEditor({ draft, sideLabel, onChange, onDone }: Props) {
             <span style={{ width: `${Math.min(100, (cost / POINT_CAP) * 100)}%` }} />
           </div>
           <span className="meter__text">
-            {cost.toLocaleString()} / {POINT_CAP.toLocaleString()} points · {draftCardIds(draft).length} of {MAX_ROSTER} players
+            {cost.toLocaleString()} / {POINT_CAP.toLocaleString()} points{cost > POINT_CAP ? ' · Over cap' : ''} · {draftCardIds(draft).length} of {MAX_ROSTER} players
           </span>
         </div>
         <div className="editor__actions">
