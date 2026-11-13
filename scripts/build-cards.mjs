@@ -22,6 +22,13 @@ const OTHER_YEAR_CARDS = new Set([
   '2003-BS-224', // Barry Zito
   '2004-BS-245', // Tim Hudson
   '2004-BS-247', // Mark Mulder
+  // Hanging Chads
+  '2002-BS-64', // Jeff Fassero
+  '2002-BS-181', // Chad Fox
+  '2002-BS-228', // Tino Martinez
+  '2002-BS-231', // Andy Pettitte
+  '2002-BS-233', // Mariano Rivera
+  '2002-PR-75', // Kazuhisa Ishii
 ]);
 const CHART_COLUMNS = ['PU', 'SO', 'GB', 'FB', 'BB', '1B', '1B+', '2B', '3B', 'HR'];
 const ROLES = { STARTER: 'Starter', RELIEVER: 'Reliever', CLOSER: 'Closer' };

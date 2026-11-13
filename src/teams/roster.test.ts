@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ALL_CARDS, CARDS_BY_ID, OTHER_YEAR_CARDS, TEAMS, YEARS } from '../data/catalog';
 import { applyAction, cardFieldingAt, chartRanges, createGame, fieldingAt, getPrompt, runs } from '../engine';
 import type { GameState, HitterCard } from '../engine';
-import { autoFill, draftCardIds, draftCost, draftFromPreset, draftIssues, emptyDraft, POINT_CAP, realTeamDraft, toTeamSetup } from './roster';
+import { applyPlatoons, autoFill, draftCardIds, draftCost, draftFromPreset, draftIssues, emptyDraft, platoonText, POINT_CAP, realTeamDraft, toTeamSetup } from './roster';
 import { SAVED_TEAMS, SAVED_TEAMS_BY_ID, savedTeamDraft } from './savedTeams';
 
 function seededRandom(seed: number) {
@@ -188,6 +188,17 @@ describe('saved teams', () => {
       RF: '2001 Ichiro Suzuki',
       DH: '2000 Edgar Martinez',
     });
+    expect(draft.lineup.map((e) => CARDS_BY_ID[e.cardId as string].name)).toEqual([
+      'Ichiro Suzuki',
+      'Edgar Martinez',
+      'Ken Griffey Jr.',
+      'Larry Walker',
+      'Alex Rodriguez',
+      'Richie Sexson',
+      'Roberto Alomar',
+      'Tom Lampkin',
+      'Jeff Cirillo',
+    ]);
     expect(draft.rotation.map((id) => label(id as string))).toEqual([
       '2000 Randy Johnson',
       '2000 Curt Schilling',
@@ -243,6 +254,55 @@ describe('saved teams', () => {
     expect(draftIssues({ ...draft, capExempt: false, savedTeam: undefined })).toEqual([]);
   });
 
+  it('has the Hanging Chads in the batting order as given', () => {
+    const draft = savedTeamDraft(SAVED_TEAMS_BY_ID['hanging-chads']);
+    const label = (id: string) => `${CARDS_BY_ID[id].year} ${CARDS_BY_ID[id].name}`;
+    expect(draft.lineup.map((e) => `${e.slot} ${label(e.cardId as string)}`)).toEqual([
+      '2B 2000 Randy Velarde',
+      'SS 2000 Derek Jeter',
+      'RF 2000 Shawn Green',
+      'DH 2000 Brian Giles',
+      '1B 2001 Todd Helton',
+      '3B 2002 Tino Martinez',
+      'CF 2001 Bernie Williams',
+      'C 2001 Jorge Posada',
+      "LF 2000 Paul O'Neill",
+    ]);
+    expect(draft.rotation.map((id) => label(id as string))).toEqual([
+      '2000 Kevin Brown',
+      '2002 Andy Pettitte',
+      '2001 Mike Mussina',
+      '2002 Kazuhisa Ishii',
+      '2000 Chuck Finley',
+    ]);
+    expect(draft.bullpen.map(label)).toEqual([
+      '2000 Alan Embree',
+      '2002 Jeff Fassero',
+      '2002 Chad Fox',
+      '2002 Mariano Rivera',
+      '2001 Dan Miceli',
+      '2001 Lance Painter',
+    ]);
+    expect(draft.bench.map(label)).toEqual(['2000 Chad Curtis']);
+  });
+
+  it("platoons O'Neill against right-handers and Curtis against lefties", () => {
+    const draft = savedTeamDraft(SAVED_TEAMS_BY_ID['hanging-chads']);
+    const leftField = (d: typeof draft) => CARDS_BY_ID[d.lineup.find((e) => e.slot === 'LF')?.cardId as string].name;
+    const benchNames = (d: typeof draft) => d.bench.map((id) => CARDS_BY_ID[id].name);
+    const vsRighty = applyPlatoons(draft, 'R');
+    const vsLefty = applyPlatoons(draft, 'L');
+    expect([leftField(vsRighty), benchNames(vsRighty)]).toEqual(["Paul O'Neill", ['Chad Curtis']]);
+    expect([leftField(vsLefty), benchNames(vsLefty)]).toEqual(['Chad Curtis', ["Paul O'Neill"]]);
+    expect(leftField(applyPlatoons(vsLefty, 'R'))).toBe("Paul O'Neill");
+    expect(draftIssues(vsRighty)).toEqual([]);
+    expect(draftIssues(vsLefty)).toEqual([]);
+    expect(platoonText(draft)).toEqual(["Paul O'Neill vs righties, Chad Curtis vs lefties"]);
+    // Teams without a platoon are left alone.
+    const mariners = savedTeamDraft(SAVED_TEAMS_BY_ID['kraigs-mariners']);
+    expect(applyPlatoons(mariners, 'L')).toBe(mariners);
+  });
+
   it('cuts later charts off at 20 and keeps those cards out of the building pool', () => {
     const pool = new Set(ALL_CARDS.map((c) => c.id));
     const used = new Set(SAVED_TEAMS.flatMap((team) => draftCardIds(savedTeamDraft(team))));
@@ -263,6 +323,10 @@ describe('saved teams', () => {
     const home = toTeamSetup(savedTeamDraft(SAVED_TEAMS_BY_ID.timberjacks));
     expect(playGame(away, home, 7).winner).not.toBeNull();
     expect(playGame(home, away, 8).winner).not.toBeNull();
+    // Timberjacks open with Mulder, a lefty, so Curtis plays left for the Chads.
+    const chads = toTeamSetup(applyPlatoons(savedTeamDraft(SAVED_TEAMS_BY_ID['hanging-chads']), 'L'));
+    expect(chads.lineup.at(-1)?.cardId).toBe('2000-BS-298');
+    expect(playGame(chads, home, 9).winner).not.toBeNull();
   });
 });
 

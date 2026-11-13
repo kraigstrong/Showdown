@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { CARDS_BY_ID, teamColor, TEAMS, YEARS } from '../data/catalog';
 import { speedLabel } from '../engine';
 import type { HitterCard, PitcherCard, Side } from '../engine';
-import { autoFill, draftCost, draftFromPreset, draftIssues, emptyDraft, POINT_CAP } from '../teams/roster';
+import { applyPlatoons, autoFill, draftCost, draftFromPreset, draftIssues, emptyDraft, platoonText, POINT_CAP } from '../teams/roster';
 import type { TeamDraft } from '../teams/roster';
 import { SAVED_TEAMS, SAVED_TEAMS_BY_ID, savedTeamDraft } from '../teams/savedTeams';
 import { RosterEditor } from './RosterEditor';
@@ -45,12 +45,14 @@ interface PanelProps {
   side: Side;
   draft: TeamDraft;
   starterId: string | null;
+  /** The other team's starter, which decides who plays in a platoon. */
+  opponentStarterId: string | null;
   onChange: (d: TeamDraft) => void;
   onStarter: (id: string) => void;
   onEdit: () => void;
 }
 
-function TeamPanel({ side, draft, starterId, onChange, onStarter, onEdit }: PanelProps) {
+function TeamPanel({ side, draft, starterId, opponentStarterId, onChange, onStarter, onEdit }: PanelProps) {
   const [year, setYear] = useState(draft.name.startsWith('2000') ? 2000 : 2001);
   const cost = draftCost(draft);
   const issues = draftIssues(draft);
@@ -118,7 +120,7 @@ function TeamPanel({ side, draft, starterId, onChange, onStarter, onEdit }: Pane
       </div>
 
       <ol className="mini-lineup">
-        {draft.lineup.map((entry, i) => {
+        {applyPlatoons(draft, opponentStarterId ? CARDS_BY_ID[opponentStarterId]?.hand : undefined).lineup.map((entry, i) => {
           const card = entry.cardId ? (CARDS_BY_ID[entry.cardId] as HitterCard) : null;
           return (
             <li key={`${entry.slot}-${i}`}>
@@ -133,6 +135,11 @@ function TeamPanel({ side, draft, starterId, onChange, onStarter, onEdit }: Pane
           );
         })}
       </ol>
+      {platoonText(draft).map((text) => (
+        <p key={text} className="team-panel__line">
+          <strong>Platoon:</strong> {text}
+        </p>
+      ))}
       <label className="team-panel__field">
         <span>Starting pitcher</span>
         <select
@@ -205,6 +212,7 @@ export function SetupScreen({ onStart, initial }: Props) {
       side={side}
       draft={drafts[side]}
       starterId={starters[side]}
+      opponentStarterId={starters[side === 'away' ? 'home' : 'away']}
       onChange={(d) => setDrafts({ ...drafts, [side]: d })}
       onStarter={(id) => setPicks({ ...picks, [side]: id })}
       onEdit={() => setEditing(side)}

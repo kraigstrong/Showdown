@@ -15,6 +15,8 @@ export interface TeamDraft {
   capExempt: boolean;
   /** Set while this is one of our saved teams, untouched. */
   savedTeam?: string;
+  /** Pairs sharing a lineup spot, one in the lineup and one on the bench. See applyPlatoons. */
+  platoons?: [string, string][];
   lineup: { slot: LineupSlot; cardId: string | null }[];
   rotation: (string | null)[];
   bullpen: string[];
@@ -74,6 +76,34 @@ export function draftIssues(draft: TeamDraft): string[] {
   if (new Set(players).size !== players.length) issues.push('The same player is on the team twice');
   // Going over the point cap is allowed; the team is just marked Over cap.
   return issues;
+}
+
+/**
+ * Starts the half of each platoon who bats from the other side of the opposing
+ * starter, a lefty against a right-hander and a righty against a lefty. The other
+ * one sits on the bench, ready to pinch hit.
+ */
+export function applyPlatoons(draft: TeamDraft, pitcherHand: GameCard['hand'] | undefined): TeamDraft {
+  if (!draft.platoons?.length || !pitcherHand || pitcherHand === 'S') return draft;
+  const next = { ...draft, lineup: draft.lineup.map((entry) => ({ ...entry })), bench: [...draft.bench] };
+  const facesOtherSide = (id: string) => CARDS_BY_ID[id].hand !== pitcherHand;
+  for (const pair of draft.platoons) {
+    const playing = next.lineup.find((entry) => entry.cardId !== null && pair.includes(entry.cardId));
+    const sitting = pair.find((id) => next.bench.includes(id));
+    if (!playing || !sitting || facesOtherSide(playing.cardId as string) || !facesOtherSide(sitting)) continue;
+    next.bench = next.bench.map((id) => (id === sitting ? (playing.cardId as string) : id));
+    playing.cardId = sitting;
+  }
+  return next;
+}
+
+/** How a team's platoons split, for showing on the setup screen. */
+export function platoonText(draft: TeamDraft): string[] {
+  return (draft.platoons ?? []).flatMap((pair) => {
+    const cards = pair.map((id) => CARDS_BY_ID[id]);
+    if (cards.some((card) => !card) || cards[0].hand === cards[1].hand) return [];
+    return [cards.map((card) => `${card.name} vs ${card.hand === 'L' ? 'righties' : card.hand === 'R' ? 'lefties' : 'everyone'}`).join(', ')];
+  });
 }
 
 export function toTeamSetup(draft: TeamDraft): TeamSetup {
