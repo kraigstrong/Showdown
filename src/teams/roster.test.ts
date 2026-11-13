@@ -251,6 +251,9 @@ describe('saved teams', () => {
       '2000 Mike Hampton',
       '2000 Terry Mulholland',
     ]);
+    // Mulder is his 2004 Pennant Run card, Control 5, not the base-set Control 4.
+    expect(draft.rotation[0]).toBe('2004-PR-31');
+    expect((CARDS_BY_ID['2004-PR-31'] as { control: number }).control).toBe(5);
     expect(draft.bullpen.map(label)).toEqual([
       '2000 Keith Foulke',
       '2002 Jason Isringhausen',
