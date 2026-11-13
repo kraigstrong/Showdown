@@ -166,6 +166,8 @@ select, .browser__filters input {
   text-transform: uppercase;
 }
 .setup__line { color: var(--ink-dim); margin-top: 6px; font-size: 15.5px; }
+.setup__rules { margin-top: 4px; color: var(--navy); font-size: 14px; text-underline-offset: 3px; }
+.setup__rules:hover { color: var(--red); }
 .setup__teams { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: start; }
 .setup__middle { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 72px; max-width: 110px; text-align: center; }
 .setup__at { font-family: var(--font-head); font-style: italic; font-size: 38px; font-weight: 700; color: var(--red); text-transform: uppercase; }

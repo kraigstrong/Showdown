@@ -228,6 +228,9 @@ export function SetupScreen({ onStart, initial }: Props) {
         <Wordmark large />
         <p className="setup__band">Two-Player Game</p>
         <p className="setup__line">Two managers. One die. The 2000 and 2001 cards.</p>
+        <a className="setup__rules" href={`${import.meta.env.BASE_URL}rules/`}>
+          Read the rulebook
+        </a>
       </header>
       <div className="setup__teams">
         {panel('away')}

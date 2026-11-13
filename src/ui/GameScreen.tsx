@@ -143,6 +143,9 @@ export function GameScreen({ session, onExit, onRematch }: Props) {
       <header className="game__bar">
         <Wordmark />
         <div className="game__tools">
+          <a className="link-button" href={`${import.meta.env.BASE_URL}rules/`} target="_blank" rel="noreferrer">
+            Rules
+          </a>
           {confirmExit ? (
             <>
               <span className="game__confirm">End this game?</span>
