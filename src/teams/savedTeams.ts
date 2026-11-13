@@ -2,6 +2,7 @@
 // point cap and use cards from after 2001; those cards' charts stop at 20.
 // A card from another year also needs its id in OTHER_YEAR_CARDS in
 // scripts/build-cards.mjs, then `npm run cards`.
+import { CARDS_BY_ID } from '../data/catalog';
 import type { LineupSlot } from '../engine';
 import type { TeamDraft } from './roster';
 
@@ -165,4 +166,26 @@ export function savedTeamDraft(team: SavedTeam): TeamDraft {
     bench: [...team.bench, ...team.lineup.flatMap((entry) => (entry.platoonWith ? [entry.platoonWith] : []))],
     platoons: team.lineup.flatMap((entry) => (entry.platoonWith ? [[entry.cardId, entry.platoonWith] as [string, string]] : [])),
   };
+}
+
+/**
+ * A team as it comes back from the browser, made safe for the cards we have now.
+ * A saved team is rebuilt from its current definition, so fixes reach browsers
+ * that picked it earlier. Anything else keeps its cards, minus any that no longer
+ * exist, which leave an empty spot rather than breaking the page.
+ */
+export function restoreDraft(draft: TeamDraft): TeamDraft {
+  const team = draft.savedTeam ? SAVED_TEAMS_BY_ID[draft.savedTeam] : undefined;
+  if (team) return { ...savedTeamDraft(team), name: draft.name };
+  const known = (id: string | null): id is string => id !== null && id in CARDS_BY_ID;
+  const restored: TeamDraft = {
+    ...draft,
+    lineup: draft.lineup.map((entry) => (known(entry.cardId) ? entry : { ...entry, cardId: null })),
+    rotation: draft.rotation.map((id) => (known(id) ? id : null)),
+    bullpen: draft.bullpen.filter(known),
+    bench: draft.bench.filter(known),
+    platoons: draft.platoons?.filter((pair) => pair.every(known)),
+  };
+  delete restored.savedTeam;
+  return restored;
 }

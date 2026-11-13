@@ -4,7 +4,7 @@ import { speedLabel } from '../engine';
 import type { HitterCard, PitcherCard, Side } from '../engine';
 import { applyPlatoons, autoFill, draftCost, draftFromPreset, draftIssues, emptyDraft, platoonText, POINT_CAP } from '../teams/roster';
 import type { TeamDraft } from '../teams/roster';
-import { SAVED_TEAMS, SAVED_TEAMS_BY_ID, savedTeamDraft } from '../teams/savedTeams';
+import { restoreDraft, SAVED_TEAMS, SAVED_TEAMS_BY_ID, savedTeamDraft } from '../teams/savedTeams';
 import { RosterEditor } from './RosterEditor';
 import type { Starters } from './App';
 import { Wordmark } from './Wordmark';
@@ -14,7 +14,10 @@ const DRAFT_KEY = 'showdown.teams.v1';
 function loadDrafts(): { away: TeamDraft; home: TeamDraft } | null {
   try {
     const raw = localStorage.getItem(DRAFT_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const saved = JSON.parse(raw) as { away: TeamDraft; home: TeamDraft };
+    // Cards can change between versions, so bring saved teams up to date.
+    return { away: restoreDraft(saved.away), home: restoreDraft(saved.home) };
   } catch {
     return null;
   }

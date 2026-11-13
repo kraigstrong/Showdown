@@ -3,7 +3,7 @@ import { ALL_CARDS, CARDS_BY_ID, OTHER_YEAR_CARDS, TEAMS, YEARS } from '../data/
 import { applyAction, cardFieldingAt, chartRanges, createGame, fieldingAt, getPrompt, runs } from '../engine';
 import type { GameState, HitterCard } from '../engine';
 import { applyPlatoons, autoFill, draftCardIds, draftCost, draftFromPreset, draftIssues, emptyDraft, platoonText, POINT_CAP, realTeamDraft, toTeamSetup } from './roster';
-import { SAVED_TEAMS, SAVED_TEAMS_BY_ID, savedTeamDraft } from './savedTeams';
+import { restoreDraft, SAVED_TEAMS, SAVED_TEAMS_BY_ID, savedTeamDraft } from './savedTeams';
 
 function seededRandom(seed: number) {
   return () => {
@@ -394,6 +394,34 @@ describe('positions', () => {
     const yankees = realTeamDraft({ year: 2001, code: 'NYY' });
     const slotOf = (name: string) => yankees?.lineup.find((e) => CARDS_BY_ID[e.cardId as string].name === name)?.slot;
     expect([slotOf('Derek Jeter'), slotOf('Tino Martinez')]).toEqual(['SS', '1B']);
+  });
+});
+
+describe('teams saved in the browser', () => {
+  it('rebuilds a saved team from its current version, keeping its name', () => {
+    // Saved before Mulder's card changed, then renamed.
+    const old = savedTeamDraft(SAVED_TEAMS_BY_ID.timberjacks);
+    old.name = 'Lumberjacks';
+    old.rotation[0] = '2004-BS-247';
+    const restored = restoreDraft(old);
+    expect(restored.rotation[0]).toBe('2004-PR-31');
+    expect(restored.name).toBe('Lumberjacks');
+    expect(draftIssues(restored)).toEqual([]);
+  });
+
+  it('leaves an empty spot for a card that no longer exists instead of breaking', () => {
+    const built = { ...draftFromPreset({ year: 2001, code: 'NYY' }), capExempt: false };
+    built.lineup[0] = { ...built.lineup[0], cardId: 'gone' };
+    built.rotation[1] = 'gone';
+    built.bullpen = ['gone', ...built.bullpen];
+    built.bench = ['gone', ...built.bench];
+    const restored = restoreDraft(built);
+    expect(restored.lineup[0].cardId).toBeNull();
+    expect(restored.rotation[1]).toBeNull();
+    expect(restored.bullpen).not.toContain('gone');
+    expect(restored.bench).not.toContain('gone');
+    expect(() => draftCost(restored)).not.toThrow();
+    expect(draftIssues(restored).length).toBeGreaterThan(0);
   });
 });
 
