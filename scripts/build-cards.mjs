@@ -43,8 +43,10 @@ const OTHER_YEAR_CARDS = new Set([
 ]);
 const CHART_COLUMNS = ['PU', 'SO', 'GB', 'FB', 'BB', '1B', '1B+', '2B', '3B', 'HR'];
 const ROLES = { STARTER: 'Starter', RELIEVER: 'Reliever', CLOSER: 'Closer' };
-// House rule: On-Base tops out at 10. A few 2001 cards print 11, later ones up to 12.
+// House rules: On-Base tops out at 10 and Speed at 20. A few 2001 cards print
+// On-Base 11 and later ones up to 12; later Speed runs as high as 24.
 const MAX_ON_BASE = 10;
+const MAX_SPEED = 20;
 
 // Corrections to the snapshot, confirmed against a second source.
 const FIXES = {
@@ -153,7 +155,7 @@ function toCard(row) {
     ...base,
     kind: 'hitter',
     onBase: Math.min(Number(row.Command), MAX_ON_BASE),
-    speed: Number(row.Speed),
+    speed: Math.min(Number(row.Speed), MAX_SPEED),
     positions: readPositions(row),
   };
 }

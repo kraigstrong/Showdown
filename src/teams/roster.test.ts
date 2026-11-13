@@ -35,6 +35,13 @@ describe('the card list', () => {
     for (const id of ['2001-BS-310', '2001-BS-450', '2002-BS-173']) expect((CARDS_BY_ID[id] as HitterCard).onBase, id).toBe(10);
   });
 
+  it('caps Speed at 20 on every card', () => {
+    const hitters = [...ALL_CARDS, ...OTHER_YEAR_CARDS].filter((c): c is HitterCard => c.kind === 'hitter');
+    expect(Math.max(...hitters.map((c) => c.speed))).toBe(20);
+    // Scott Podsednik 2005 prints 24.
+    expect((CARDS_BY_ID['2005-BS-184'] as HitterCard).speed).toBe(20);
+  });
+
   it('has Matt Walbeck at C+7', () => {
     const card = CARDS_BY_ID['2000-BS-15'] as HitterCard;
     expect(card.name).toBe('Matt Walbeck');
