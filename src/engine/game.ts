@@ -90,13 +90,11 @@ export function catcherArm(s: GameState, side: Side): number {
   return fieldingTotal(s, side, ['C']);
 }
 
-/** The numbers behind a throw: the defense rolls d20 + bonus and must beat the target. */
-export function throwNumbers(
-  s: GameState,
-  play: ThrowPlay,
-  attempt: Attempt,
-  twoOutsBefore: boolean,
-): { bonus: number; target: number; outChance: number } {
+/**
+ * The numbers behind a throw: the defense rolls d20 + bonus and must beat the
+ * target. House rule: no extra +5 for two outs on extra bases, only +5 going home.
+ */
+export function throwNumbers(s: GameState, play: ThrowPlay, attempt: Attempt): { bonus: number; target: number; outChance: number } {
   const defense = defenseSide(s);
   const speed = hitterCard(s, attempt.runnerId).speed;
   let bonus: number;
@@ -106,7 +104,7 @@ export function throwNumbers(
     target = speed;
   } else {
     bonus = outfieldTotal(s, defense);
-    target = speed + (attempt.to === HOME ? 5 : 0) + (twoOutsBefore ? 5 : 0);
+    target = speed + (attempt.to === HOME ? 5 : 0);
   }
   return { bonus, target, outChance: chanceToBeat(bonus, target) };
 }
@@ -124,7 +122,7 @@ function emptyBatterLine(): BatterLine {
 }
 
 function emptyPitcherLine(): PitcherLine {
-  return { innings: 0, outs: 0, h: 0, r: 0, bb: 0, so: 0, hr: 0 };
+  return { outs: 0, h: 0, r: 0, bb: 0, so: 0, hr: 0 };
 }
 
 function createTeam(setup: TeamSetup, runsByInning: number[]): TeamState {
@@ -362,8 +360,6 @@ function startAtBat(s: GameState) {
 }
 
 function startHalf(s: GameState) {
-  const pitching = s.teams[defenseSide(s)];
-  pitching.pitching[pitching.pitcherId as string].innings += 1;
   s.log.push({ t: 'half', inning: s.inning, half: s.half });
   startAtBat(s);
 }
@@ -426,11 +422,11 @@ function groundBallAdvance(s: GameState, creditBatter: boolean) {
   if (second) s.bases[2] = second;
 }
 
-function offerExtraBases(s: GameState, play: 'hit' | 'fly', batterId: string, twoOutsBefore: boolean) {
+function offerExtraBases(s: GameState, play: 'hit' | 'fly', batterId: string) {
   if (isOver(s)) return;
   const eligible = [1, 2].filter((base) => s.bases[base] && s.bases[base] !== batterId);
   const canGo = sendActions(s, eligible).length > 1;
-  if (canGo) s.phase = { kind: 'send', play, eligible, twoOutsBefore };
+  if (canGo) s.phase = { kind: 'send', play, eligible };
   else finishAtBat(s);
 }
 
@@ -440,7 +436,6 @@ function applySwing(s: GameState, result: SwingResult) {
   const batterId = currentBatterId(s);
   const batter = offense.batting[batterId];
   const pitcher = defense.pitching[currentPitcherId(s)];
-  const twoOutsBefore = s.outs === 2;
 
   if (result !== 'BB') batter.ab += 1;
 
@@ -470,7 +465,7 @@ function applySwing(s: GameState, result: SwingResult) {
     case 'FB':
       recordOut(s);
       if (s.outs >= 3) return finishAtBat(s);
-      return offerExtraBases(s, 'fly', batterId, false);
+      return offerExtraBases(s, 'fly', batterId);
     case 'BB': {
       batter.bb += 1;
       pitcher.bb += 1;
@@ -501,7 +496,7 @@ function applySwing(s: GameState, result: SwingResult) {
       moveRunners(s, batterId, bases);
       if (result === '1B+') s.singlePlusRunner = batterId;
       if (result === '1B' || result === '1B+' || result === '2B') {
-        return offerExtraBases(s, 'hit', batterId, twoOutsBefore);
+        return offerExtraBases(s, 'hit', batterId);
       }
       return finishAtBat(s);
     }
@@ -516,7 +511,7 @@ function attemptsFor(s: GameState, from: number[]): Attempt[] {
 
 function resolveThrow(s: GameState, phase: Extract<Phase, { kind: 'throw' }>) {
   const targetAttempt = phase.attempts.find((attempt) => attempt.from === phase.targetFrom) as Attempt;
-  const { bonus, target } = throwNumbers(s, phase.play, targetAttempt, phase.twoOutsBefore);
+  const { bonus, target } = throwNumbers(s, phase.play, targetAttempt);
   const roll = rollD20(s);
   const total = roll + bonus;
   const out = total > target;
@@ -560,11 +555,11 @@ function resolveThrow(s: GameState, phase: Extract<Phase, { kind: 'throw' }>) {
 
 // ---------------------------------------------------------------- actions
 
-function startThrow(s: GameState, play: ThrowPlay, attempts: Attempt[], twoOutsBefore: boolean) {
+function startThrow(s: GameState, play: ThrowPlay, attempts: Attempt[]) {
   if (attempts.length === 1) {
-    s.phase = { kind: 'throw', play, attempts, targetFrom: attempts[0].from, twoOutsBefore };
+    s.phase = { kind: 'throw', play, attempts, targetFrom: attempts[0].from };
   } else {
-    s.phase = { kind: 'aim', play, attempts, twoOutsBefore };
+    s.phase = { kind: 'aim', play, attempts };
   }
 }
 
@@ -643,8 +638,7 @@ function applyPitchingChange(s: GameState, inId: string) {
   const outId = team.pitcherId as string;
   team.pitcherId = inId;
   team.bullpen = team.bullpen.filter((id) => id !== inId);
-  // Entering mid-inning still counts as a full inning against his IP.
-  team.pitching[inId] = { ...emptyPitcherLine(), innings: 1 };
+  team.pitching[inId] = emptyPitcherLine();
   team.pitchersUsed.push(inId);
   s.atBat.pitchingChangeUsed = true;
   s.atBat.phUsed = false;
@@ -681,17 +675,17 @@ export function applyAction(state: GameState, actor: Side, action: Action): { st
       applyPitchingChange(s, action.cardId);
       break;
     case 'STEAL':
-      startThrow(s, 'steal', attemptsFor(s, action.from), false);
+      startThrow(s, 'steal', attemptsFor(s, action.from));
       break;
     case 'SEND': {
       const phase = s.phase as Extract<Phase, { kind: 'send' }>;
       if (action.from.length === 0) finishAtBat(s);
-      else startThrow(s, phase.play, attemptsFor(s, action.from), phase.twoOutsBefore);
+      else startThrow(s, phase.play, attemptsFor(s, action.from));
       break;
     }
     case 'AIM': {
       const phase = s.phase as Extract<Phase, { kind: 'aim' }>;
-      s.phase = { kind: 'throw', play: phase.play, attempts: phase.attempts, targetFrom: action.from, twoOutsBefore: phase.twoOutsBefore };
+      s.phase = { kind: 'throw', play: phase.play, attempts: phase.attempts, targetFrom: action.from };
       break;
     }
   }
