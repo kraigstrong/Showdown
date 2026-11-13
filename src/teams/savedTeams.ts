@@ -69,7 +69,7 @@ export const SAVED_TEAMS: SavedTeam[] = [
       { slot: 'CF', cardId: '2001-PR-17' }, // 2001 Juan Pierre
     ],
     rotation: [
-      '2004-BS-247', // 2004 Mark Mulder (base set)
+      '2004-PR-31', // 2004 Mark Mulder (Pennant Run, Control 5)
       '2003-BS-224', // 2003 Barry Zito
       '2004-BS-245', // 2004 Tim Hudson
       '2000-BS-195', // 2000 Mike Hampton (base set, HOU)

@@ -21,7 +21,7 @@ const OTHER_YEAR_CARDS = new Set([
   '2002-BS-264', // Josias Manzanillo
   '2003-BS-224', // Barry Zito
   '2004-BS-245', // Tim Hudson
-  '2004-BS-247', // Mark Mulder
+  '2004-PR-31', // Mark Mulder (Pennant Run)
   // Hanging Chads
   '2002-BS-64', // Jeff Fassero
   '2002-BS-181', // Chad Fox
