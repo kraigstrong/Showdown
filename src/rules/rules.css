@@ -1,0 +1,61 @@
+/* The rulebook page: the game's cream box panel, set like a printed booklet. */
+.rules { max-width: 760px; margin: 0 auto; padding: 18px 16px 56px; }
+.rules__head { display: flex; flex-direction: column; align-items: center; text-align: center; margin-bottom: 20px; }
+.rules__back { align-self: flex-start; margin-bottom: 8px; color: var(--navy); font-size: 14px; text-underline-offset: 3px; }
+.rules__back:hover { color: var(--red); }
+.rules__lede { margin-top: 10px; max-width: 34em; color: var(--ink-dim); font-size: 16px; }
+
+.rules__toc { margin-bottom: 24px; padding: 12px 16px; background: var(--paper); border: 1px solid var(--rule); border-radius: 3px; }
+.rules__toc ol { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 16px; counter-reset: toc; }
+.rules__toc li { counter-increment: toc; }
+.rules__toc li::before { content: counter(toc) '.'; display: inline-block; width: 1.6em; color: var(--red); font-family: var(--font-head); font-weight: 700; }
+.rules__toc a { color: var(--navy); text-underline-offset: 3px; }
+.rules__toc a:hover { color: var(--red); }
+
+.rules__section { margin-bottom: 28px; scroll-margin-top: 12px; }
+.rules__section h2 {
+  margin-bottom: 10px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid var(--navy);
+  color: var(--navy);
+  font-family: var(--font-head);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 26px;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+.rules__section p, .rules__steps, .rules__results, .rules__list { margin-bottom: 10px; font-size: 16px; line-height: 1.5; }
+.rules__section a { color: var(--navy); text-underline-offset: 3px; }
+.rules__steps { list-style: decimal; padding-left: 1.4em; }
+.rules__steps li { margin-bottom: 6px; padding-left: 4px; }
+.rules__list { list-style: disc; padding-left: 1.4em; }
+
+.rules__results { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; padding: 10px 14px; background: var(--paper); border: 1px solid var(--rule); border-radius: 3px; }
+.rules__results dt { font-family: var(--font-head); font-weight: 700; font-style: italic; color: var(--red); white-space: nowrap; }
+
+/* A house rule: a red tag, like the red flaps of the box, over a white card. */
+.house { margin: 12px 0 14px; padding: 12px 14px 10px; background: var(--white); border: 1px solid var(--rule); border-left: 6px solid var(--red); border-radius: 3px; box-shadow: 0 1px 0 rgba(35, 33, 79, .08); }
+.house__tag {
+  display: inline-block;
+  margin-bottom: 6px !important;
+  padding: 1px 8px;
+  background: var(--red);
+  color: var(--white);
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-style: italic;
+  font-size: 13px !important;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  line-height: 1.5 !important;
+}
+.house__title { margin-bottom: 4px; font-family: var(--font-head); font-weight: 700; font-size: 20px; color: var(--ink); }
+.house__body p, .house__body .rules__steps { margin-bottom: 8px; }
+.house__book { margin: 8px 0 0 !important; padding-top: 8px; border-top: 1px dashed var(--rule); color: var(--ink-dim); font-size: 14.5px !important; }
+.house__book strong { color: var(--ink); }
+
+@media (max-width: 560px) {
+  .rules__results { grid-template-columns: 1fr; }
+  .rules__results dd { margin-bottom: 6px; }
+}

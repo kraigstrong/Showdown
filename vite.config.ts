@@ -8,6 +8,10 @@ export default defineConfig({
   build: {
     outDir: 'dist/showdown',
     emptyOutDir: true,
+    // The game, and the rulebook at /showdown/rules/.
+    rolldownOptions: {
+      input: { main: 'index.html', rules: 'rules/index.html' },
+    },
   },
   plugins: [react()],
   test: {

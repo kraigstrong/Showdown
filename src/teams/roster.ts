@@ -3,10 +3,9 @@ import { ALL_CARDS, CARDS_BY_ID, HITTERS, PITCHERS, TEAMS_BY_CODE } from '../dat
 import { cardFieldingAt, fieldingAt, LINEUP_SLOTS } from '../engine';
 import type { GameCard, HitterCard, LineupSlot, PitcherCard, TeamSetup } from '../engine';
 
-export const POINT_CAP = 5000;
-export const MAX_ROSTER = 25;
-export const ROTATION_SIZE = 4;
-export const BENCH_COST_DIVISOR = 5;
+import { BENCH_COST_DIVISOR, MAX_ROSTER, POINT_CAP, ROTATION_SIZE } from './limits';
+
+export { BENCH_COST_DIVISOR, MAX_ROSTER, POINT_CAP, ROTATION_SIZE };
 
 export interface TeamDraft {
   name: string;
