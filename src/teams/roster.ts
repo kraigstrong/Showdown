@@ -11,7 +11,7 @@ export const BENCH_COST_DIVISOR = 5;
 export interface TeamDraft {
   name: string;
   code?: string;
-  /** A real or saved team plays with its own cards, so the point cap doesn't apply. */
+  /** An untouched real or saved team, played with exactly its own cards. */
   capExempt: boolean;
   /** Set while this is one of our saved teams, untouched. */
   savedTeam?: string;
@@ -64,7 +64,8 @@ export function draftIssues(draft: TeamDraft): string[] {
   for (const entry of draft.lineup) {
     if (!entry.cardId) continue;
     const card = CARDS_BY_ID[entry.cardId];
-    if (card.kind !== 'hitter' || fieldingAt(card, entry.slot) === null) {
+    // A saved team plays people where we always played them, out of position or not.
+    if (card.kind !== 'hitter' || (fieldingAt(card, entry.slot) === null && !draft.savedTeam)) {
       issues.push(`${card.name} can't play ${entry.slot}`);
     }
   }
@@ -72,10 +73,7 @@ export function draftIssues(draft: TeamDraft): string[] {
   if (ids.length > MAX_ROSTER) issues.push(`Roster has ${ids.length} players; the limit is ${MAX_ROSTER}`);
   const players = ids.map((id) => CARDS_BY_ID[id].playerId);
   if (new Set(players).size !== players.length) issues.push('The same player is on the team twice');
-  const cost = draftCost(draft);
-  if (!draft.capExempt && cost > POINT_CAP) {
-    issues.push(`${cost.toLocaleString()} points is over the ${POINT_CAP.toLocaleString()} cap`);
-  }
+  // Going over the point cap is allowed; the team is just marked Over cap.
   return issues;
 }
 
@@ -192,7 +190,8 @@ const DRAFT_BULLPEN = 6;
 const DRAFT_BENCH = 4;
 
 /**
- * Fills whatever is still open with random cards that fit under the cap. Spends
+ * Fills whatever is still open with random cards that fit under the cap, or the
+ * cheapest ones left if the team is already over it. Spends
  * roughly evenly per open spot, so the team comes out balanced, not one superstar
  * surrounded by ten-point players.
  */
@@ -216,7 +215,10 @@ export function autoFill(draft: TeamDraft, random: () => number = Math.random): 
     const share = unitsLeft > 0 ? (budget / unitsLeft) * weight : budget;
     const target = share * (0.7 + random() * 0.6);
     const reserve = slotsAfterThis * 10;
-    const options = shuffled(pool, random).filter((c) => !used.has(c.playerId) && c.points <= budget - reserve);
+    const available = shuffled(pool, random).filter((c) => !used.has(c.playerId));
+    const affordable = available.filter((c) => c.points <= budget - reserve);
+    const cheapest = available.reduce<C[]>((low, c) => (low.length === 0 || c.points < low[0].points ? [c] : low), []);
+    const options = affordable.length > 0 ? affordable : cheapest;
     if (options.length === 0) return null;
     const chosen = options.reduce((best, c) => (Math.abs(c.points - target) < Math.abs(best.points - target) ? c : best));
     used.add(chosen.playerId);

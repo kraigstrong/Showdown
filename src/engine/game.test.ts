@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, createGame, getPrompt, IllegalActionError, runs, throwNumbers } from './game';
-import { chanceToBeat, chartRanges, fatigueOf, fieldingAt, resultForRoll } from './rules';
+import { applyAction, createGame, getPrompt, IllegalActionError, infieldTotal, runs, throwNumbers } from './game';
+import { chanceToBeat, chartRanges, fatigueOf, fieldingAt, fieldingIn, resultForRoll } from './rules';
 import type { Action, Chart, GameCard, GameState, HitterCard, LineupSlot, PitcherCard, TeamSetup } from './types';
 
 // ---------------------------------------------------------------- helpers
@@ -161,6 +161,18 @@ describe('positions', () => {
 
   it('lets any hitter DH', () => {
     expect(fieldingAt(hitter('x', 'C'), 'DH')).toBe(0);
+  });
+
+  it('plays someone off his card at -1, or -2 if he has no fielding position', () => {
+    const shortstop = hitter('x', 'SS', { positions: [{ pos: 'SS', fielding: 3 }] });
+    expect(fieldingIn(shortstop, 'SS')).toBe(3);
+    expect(fieldingIn(shortstop, '3B')).toBe(-1);
+    expect(fieldingIn(hitter('y', 'DH'), '1B')).toBe(-2);
+  });
+
+  it('counts an out-of-position fielder in the infield total for a double play', () => {
+    const s = newGame({ home: { '1B': { positions: [{ pos: 'DH', fielding: 0 }] }, SS: { positions: [{ pos: 'SS', fielding: 3 }] } } });
+    expect(infieldTotal(s, 'home')).toBe(3 - 2);
   });
 });
 

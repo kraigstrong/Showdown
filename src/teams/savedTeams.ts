@@ -51,6 +51,37 @@ export const SAVED_TEAMS: SavedTeam[] = [
     ],
     bench: [],
   },
+  {
+    id: 'timberjacks',
+    name: 'Timberjacks',
+    lineup: [
+      { slot: 'SS', cardId: '2002-BS-2' }, // 2002 David Eckstein
+      { slot: 'LF', cardId: '2000-BS-285' }, // 2000 Rickey Henderson
+      { slot: '3B', cardId: '2001-BS-68' }, // 2001 Nomar Garciaparra, a SS card: out of position, -1
+      { slot: 'C', cardId: '2000-BS-441' }, // 2000 Ivan Rodriguez
+      { slot: 'RF', cardId: '2001-BS-2' }, // 2001 Darin Erstad
+      { slot: '1B', cardId: '2001-BS-107' }, // 2001 Frank Thomas, a DH card: out of position, -2
+      { slot: 'DH', cardId: '2000-BS-237' }, // 2000 Marquis Grissom
+      { slot: '2B', cardId: '2001-BS-143' }, // 2001 Jeff Frye
+      { slot: 'CF', cardId: '2001-PR-17' }, // 2001 Juan Pierre
+    ],
+    rotation: [
+      '2004-BS-247', // 2004 Mark Mulder (base set)
+      '2003-BS-224', // 2003 Barry Zito
+      '2004-BS-245', // 2004 Tim Hudson
+      '2000-BS-195', // 2000 Mike Hampton (base set, HOU)
+      '2000-PR-15', // 2000 Terry Mulholland
+    ],
+    bullpen: [
+      '2000-PR-31', // 2000 Keith Foulke
+      '2002-BS-244', // 2002 Jason Isringhausen (base set, OAK)
+      '2000-BS-447', // 2000 Jeff Zimmerman
+      '2002-BS-264', // 2002 Josias Manzanillo
+      '2000-PR-106', // 2000 Jason Christiansen
+      '2000-BS-219', // 2000 Pedro Borbon
+    ],
+    bench: [],
+  },
 ];
 
 export const SAVED_TEAMS_BY_ID: Record<string, SavedTeam> = Object.fromEntries(SAVED_TEAMS.map((team) => [team.id, team]));

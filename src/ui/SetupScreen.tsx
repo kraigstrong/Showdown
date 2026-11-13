@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CARDS_BY_ID, teamColor, TEAMS, YEARS } from '../data/catalog';
-import { speedLabel } from '../engine';
+import { fieldingAt, fieldingIn, speedLabel } from '../engine';
 import type { HitterCard, PitcherCard, Side } from '../engine';
 import { autoFill, draftCost, draftFromPreset, draftIssues, emptyDraft, POINT_CAP } from '../teams/roster';
 import type { TeamDraft } from '../teams/roster';
@@ -56,6 +56,11 @@ function TeamPanel({ side, draft, starterId, onChange, onStarter, onEdit }: Pane
   const issues = draftIssues(draft);
   const overCap = cost > POINT_CAP;
   const rotation = draft.rotation.filter((id): id is string => id !== null);
+  const offPosition = draft.lineup.flatMap(({ cardId, slot }) => {
+    const card = cardId ? CARDS_BY_ID[cardId] : null;
+    if (!card || card.kind !== 'hitter' || fieldingAt(card, slot) !== null) return [];
+    return [`${card.name} at ${slot} (${String(fieldingIn(card, slot)).replace('-', '−')})`];
+  });
 
   return (
     <section className="team-panel" style={{ '--team': teamColor(draft.code) } as React.CSSProperties}>
@@ -133,6 +138,11 @@ function TeamPanel({ side, draft, starterId, onChange, onStarter, onEdit }: Pane
           );
         })}
       </ol>
+      {offPosition.length > 0 && (
+        <p className="team-panel__line">
+          <strong>Out of position:</strong> {offPosition.join(', ')}
+        </p>
+      )}
       <label className="team-panel__field">
         <span>Starting pitcher</span>
         <select
@@ -155,13 +165,13 @@ function TeamPanel({ side, draft, starterId, onChange, onStarter, onEdit }: Pane
       <p className="team-panel__line">
         <strong>Bullpen {draft.bullpen.length}</strong> · <strong>Bench {draft.bench.length}</strong>
       </p>
-      <div className={`meter ${overCap && (!draft.capExempt || draft.savedTeam) ? 'is-over' : ''}`}>
+      <div className={`meter ${overCap ? 'is-over' : ''}`}>
         <div className="meter__bar">
           <span style={{ width: `${Math.min(100, (cost / POINT_CAP) * 100)}%` }} />
         </div>
         <span className="meter__text">
           {cost.toLocaleString()} / {POINT_CAP.toLocaleString()} points
-          {draft.capExempt && overCap ? (draft.savedTeam ? ' · Over cap' : ' · real roster, cap waived') : ''}
+          {overCap ? ' · Over cap' : ''}
         </span>
       </div>
       {issues.length > 0 && (

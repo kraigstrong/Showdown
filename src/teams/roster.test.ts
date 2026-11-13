@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_CARDS, CARDS_BY_ID, OTHER_YEAR_CARDS, TEAMS, YEARS } from '../data/catalog';
-import { applyAction, chartRanges, createGame, getPrompt, runs } from '../engine';
+import { applyAction, chartRanges, createGame, fieldingIn, getPrompt, runs } from '../engine';
 import type { GameState, HitterCard } from '../engine';
 import { autoFill, draftCardIds, draftCost, draftFromPreset, draftIssues, emptyDraft, POINT_CAP, realTeamDraft, toTeamSetup } from './roster';
 import { SAVED_TEAMS, SAVED_TEAMS_BY_ID, savedTeamDraft } from './savedTeams';
@@ -205,6 +205,46 @@ describe('saved teams', () => {
     ]);
   });
 
+  it('has the Timberjacks with the cards as listed, Thomas and Nomar out of position', () => {
+    const draft = savedTeamDraft(SAVED_TEAMS_BY_ID.timberjacks);
+    const label = (id: string) => `${CARDS_BY_ID[id].year} ${CARDS_BY_ID[id].name}`;
+    expect(Object.fromEntries(draft.lineup.map((e) => [e.slot, label(e.cardId as string)]))).toEqual({
+      C: '2000 Ivan Rodriguez',
+      '1B': '2001 Frank Thomas',
+      '2B': '2001 Jeff Frye',
+      SS: '2002 David Eckstein',
+      '3B': '2001 Nomar Garciaparra',
+      LF: '2000 Rickey Henderson',
+      CF: '2001 Juan Pierre',
+      RF: '2001 Darin Erstad',
+      DH: '2000 Marquis Grissom',
+    });
+    expect(draft.rotation.map((id) => label(id as string))).toEqual([
+      '2004 Mark Mulder',
+      '2003 Barry Zito',
+      '2004 Tim Hudson',
+      '2000 Mike Hampton',
+      '2000 Terry Mulholland',
+    ]);
+    expect(draft.bullpen.map(label)).toEqual([
+      '2000 Keith Foulke',
+      '2002 Jason Isringhausen',
+      '2000 Jeff Zimmerman',
+      '2002 Josias Manzanillo',
+      '2000 Jason Christiansen',
+      '2000 Pedro Borbon',
+    ]);
+    const thomas = CARDS_BY_ID['2001-BS-107'] as HitterCard;
+    const nomar = CARDS_BY_ID['2001-BS-68'] as HitterCard;
+    expect(fieldingIn(thomas, '1B')).toBe(-2);
+    expect(fieldingIn(nomar, '3B')).toBe(-1);
+    // Once it's edited it's a custom team, and positions count again.
+    expect(draftIssues({ ...draft, capExempt: false, savedTeam: undefined })).toEqual([
+      "Nomar Garciaparra can't play 3B",
+      "Frank Thomas can't play 1B",
+    ]);
+  });
+
   it('cuts later charts off at 20 and keeps those cards out of the building pool', () => {
     const pool = new Set(ALL_CARDS.map((c) => c.id));
     const used = new Set(SAVED_TEAMS.flatMap((team) => draftCardIds(savedTeamDraft(team))));
@@ -220,9 +260,26 @@ describe('saved teams', () => {
     expect(CARDS_BY_ID['2003-BS-266'].chart.HR).toBeUndefined();
   });
 
-  it('plays a full game', () => {
+  it('play full games against each other', () => {
     const away = toTeamSetup(savedTeamDraft(SAVED_TEAMS_BY_ID['kraigs-mariners']));
-    const home = toTeamSetup(draftFromPreset({ year: 2001, code: 'NYY' }));
+    const home = toTeamSetup(savedTeamDraft(SAVED_TEAMS_BY_ID.timberjacks));
     expect(playGame(away, home, 7).winner).not.toBeNull();
+    expect(playGame(home, away, 8).winner).not.toBeNull();
+  });
+});
+
+describe('the point cap', () => {
+  it('lets a team you built go over it', () => {
+    const built = { ...draftFromPreset({ year: 2001, code: 'NYY' }), capExempt: false };
+    expect(draftCost(built)).toBeGreaterThan(POINT_CAP);
+    expect(draftIssues(built)).toEqual([]);
+  });
+
+  it('still fills every open spot when the team is already over it', () => {
+    const built = { ...draftFromPreset({ year: 2001, code: 'NYY' }), capExempt: false };
+    built.lineup = built.lineup.map((entry, i) => (i < 2 ? { ...entry, cardId: null } : entry));
+    const filled = autoFill(built, seededRandom(3));
+    expect(filled.lineup.every((entry) => entry.cardId)).toBe(true);
+    expect(draftIssues(filled)).toEqual([]);
   });
 });

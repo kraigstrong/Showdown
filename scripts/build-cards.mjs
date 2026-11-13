@@ -9,11 +9,19 @@ const SETS = new Set(['BS', 'PR']);
 // Cards from other years that a saved team in src/teams/savedTeams.ts plays with.
 // They stay out of the card pool for building and random teams.
 const OTHER_YEAR_CARDS = new Set([
+  // Kraig's Mariners
   '2002-BS-186', // Richie Sexson
   '2002-BS-301', // Jeff Nelson
   '2003-BS-266', // Jamie Moyer
   '2003-BS-268', // Joel Pineiro
   '2004-TD-63', // Rafael Soriano
+  // Timberjacks
+  '2002-BS-2', // David Eckstein
+  '2002-BS-244', // Jason Isringhausen
+  '2002-BS-264', // Josias Manzanillo
+  '2003-BS-224', // Barry Zito
+  '2004-BS-245', // Tim Hudson
+  '2004-BS-247', // Mark Mulder
 ]);
 const CHART_COLUMNS = ['PU', 'SO', 'GB', 'FB', 'BB', '1B', '1B+', '2B', '3B', 'HR'];
 const ROLES = { STARTER: 'Starter', RELIEVER: 'Reliever', CLOSER: 'Closer' };
