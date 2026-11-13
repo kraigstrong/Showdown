@@ -1,7 +1,7 @@
 // The rules of the game as pure functions: state and action in, new state out.
 // Dice live here too, so a future server can own the rolls and the state, and
 // the screens only ever send actions and show results.
-import { chanceToBeat, fatigueOf, FIELD_SLOTS, fieldingAt, fieldingIn, INFIELD, OUTFIELD, resultForRoll } from './rules';
+import { chanceToBeat, fatigueOf, FIELD_SLOTS, fieldingAt, INFIELD, OUTFIELD, resultForRoll } from './rules';
 import type {
   Action,
   Attempt,
@@ -72,7 +72,7 @@ function fieldingTotal(s: GameState, side: Side, slots: FieldSlot[]): number {
   let total = 0;
   for (const entry of s.teams[side].lineup) {
     if ((slots as LineupSlot[]).includes(entry.slot)) {
-      total += fieldingIn(hitterCard(s, entry.cardId), entry.slot);
+      total += fieldingAt(hitterCard(s, entry.cardId), entry.slot) ?? 0;
     }
   }
   return total;

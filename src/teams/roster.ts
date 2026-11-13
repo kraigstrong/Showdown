@@ -1,6 +1,6 @@
 // Building a team to take into a game: the point cap, real rosters and random drafts.
 import { ALL_CARDS, CARDS_BY_ID, HITTERS, PITCHERS, TEAMS_BY_CODE } from '../data/catalog';
-import { fieldingAt, LINEUP_SLOTS } from '../engine';
+import { cardFieldingAt, fieldingAt, LINEUP_SLOTS } from '../engine';
 import type { GameCard, HitterCard, LineupSlot, PitcherCard, TeamSetup } from '../engine';
 
 export const POINT_CAP = 5000;
@@ -64,8 +64,7 @@ export function draftIssues(draft: TeamDraft): string[] {
   for (const entry of draft.lineup) {
     if (!entry.cardId) continue;
     const card = CARDS_BY_ID[entry.cardId];
-    // A saved team plays people where we always played them, out of position or not.
-    if (card.kind !== 'hitter' || (fieldingAt(card, entry.slot) === null && !draft.savedTeam)) {
+    if (card.kind !== 'hitter' || fieldingAt(card, entry.slot) === null) {
       issues.push(`${card.name} can't play ${entry.slot}`);
     }
   }
@@ -113,15 +112,18 @@ export function suggestBattingOrder<T extends { cardId: string | null }>(lineup:
   return [...order, ...lineup.filter((entry) => !entry.cardId)];
 }
 
-/** The strongest legal lineup from a set of hitters, or null if a position can't be filled. */
-function bestLineup(hitters: HitterCard[]): { slot: LineupSlot; cardId: string }[] | null {
+/** The strongest lineup from a set of hitters where each plays a spot that fits, or null if a position can't be filled. */
+function bestLineup(
+  hitters: HitterCard[],
+  fits: (card: HitterCard, slot: LineupSlot) => number | null,
+): { slot: LineupSlot; cardId: string }[] | null {
   const full = (1 << LINEUP_SLOTS.length) - 1;
   let table = new Map<number, { score: number; picks: [number, string][] }>([[0, { score: 0, picks: [] }]]);
   for (const hitter of hitters) {
     const next = new Map(table);
     for (const [mask, entry] of table) {
       LINEUP_SLOTS.forEach((slot, bit) => {
-        if (mask & (1 << bit) || fieldingAt(hitter, slot) === null) return;
+        if (mask & (1 << bit) || fits(hitter, slot) === null) return;
         const nextMask = mask | (1 << bit);
         const score = entry.score + hitter.points;
         const existing = next.get(nextMask);
@@ -162,7 +164,8 @@ export function realTeamDraft({ year, code }: RealTeamKey): TeamDraft | null {
   const pitchers = cards.filter((c): c is PitcherCard => c.kind === 'pitcher');
   const starters = pitchers.filter((c) => c.role === 'Starter').sort((a, b) => b.points - a.points);
   if (starters.length === 0) return null;
-  const lineup = bestLineup(hitters);
+  // Everyone at a position on his card when the roster allows it, else the house rule.
+  const lineup = bestLineup(hitters, cardFieldingAt) ?? bestLineup(hitters, fieldingAt);
   if (!lineup) return null;
   const inLineup = new Set(lineup.map((entry) => entry.cardId));
   const info = TEAMS_BY_CODE[code];
@@ -230,12 +233,13 @@ export function autoFill(draft: TeamDraft, random: () => number = Math.random): 
   let spotsLeft = openLineup.length + openStarters + openBullpen;
   // Hardest positions first, so the catchers and shortstops aren't the leftovers.
   const lineupOrder = [...openLineup].sort(
-    (a, b) => HITTERS.filter((c) => fieldingAt(c, a.slot) !== null).length - HITTERS.filter((c) => fieldingAt(c, b.slot) !== null).length,
+    (a, b) => HITTERS.filter((c) => cardFieldingAt(c, a.slot) !== null).length - HITTERS.filter((c) => cardFieldingAt(c, b.slot) !== null).length,
   );
   for (const entry of lineupOrder) {
     spotsLeft -= 1;
     const chosen = pick(
-      HITTERS.filter((c) => fieldingAt(c, entry.slot) !== null),
+      // Random players go where their cards say they play.
+      HITTERS.filter((c) => cardFieldingAt(c, entry.slot) !== null),
       weights.lineup,
       spotsLeft,
     );

@@ -50,7 +50,11 @@ function positionCovers(pos: CardPosition, slot: LineupSlot): boolean {
 }
 
 /** The hitter's Fielding at a slot, or null if he doesn't qualify there. Anyone can DH. */
-export function fieldingAt(card: HitterCard, slot: LineupSlot): number | null {
+const INFIELD_POSITIONS: CardPosition[] = ['1B', '2B', '3B', 'SS', 'IF'];
+const OUTFIELD_POSITIONS: CardPosition[] = ['LF', 'CF', 'RF', 'LF/RF', 'OF'];
+
+/** His Fielding at a spot his card lists, or null if it doesn't list it. Anyone can DH. */
+export function cardFieldingAt(card: HitterCard, slot: LineupSlot): number | null {
   if (slot === 'DH') return 0;
   let best: number | null = null;
   for (const { pos, fielding } of card.positions) {
@@ -60,13 +64,19 @@ export function fieldingAt(card: HitterCard, slot: LineupSlot): number | null {
 }
 
 /**
- * His Fielding where he actually plays. Off his card he takes the Expert rule for
- * first base, at any spot: -1, or -2 if his card has no fielding position at all.
+ * His Fielding at a spot, or null if he can't play there. Our house rules: any
+ * infielder can play anywhere in the infield, any outfielder anywhere in the
+ * outfield, and a DH can play first base, at +0 when the spot isn't on his card.
  */
-export function fieldingIn(card: HitterCard, slot: LineupSlot): number {
-  const fielding = fieldingAt(card, slot);
-  if (fielding !== null) return fielding;
-  return card.positions.some((p) => p.pos !== 'DH') ? -1 : -2;
+export function fieldingAt(card: HitterCard, slot: LineupSlot): number | null {
+  const listed = cardFieldingAt(card, slot);
+  if (listed !== null) return listed;
+  const isInfielder = card.positions.some((p) => INFIELD_POSITIONS.includes(p.pos));
+  if (isInfielder && (INFIELD as LineupSlot[]).includes(slot)) return 0;
+  const isOutfielder = card.positions.some((p) => OUTFIELD_POSITIONS.includes(p.pos));
+  if (isOutfielder && (OUTFIELD as LineupSlot[]).includes(slot)) return 0;
+  if (slot === '1B' && card.positions.some((p) => p.pos === 'DH')) return 0;
+  return null;
 }
 
 /** The penalty on every pitch: 1 for each inning past the pitcher's IP. */

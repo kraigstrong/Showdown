@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ALL_CARDS, CARDS_BY_ID, OTHER_YEAR_CARDS, TEAMS, YEARS } from '../data/catalog';
-import { applyAction, chartRanges, createGame, fieldingIn, getPrompt, runs } from '../engine';
+import { applyAction, cardFieldingAt, chartRanges, createGame, fieldingAt, getPrompt, runs } from '../engine';
 import type { GameState, HitterCard } from '../engine';
 import { autoFill, draftCardIds, draftCost, draftFromPreset, draftIssues, emptyDraft, POINT_CAP, realTeamDraft, toTeamSetup } from './roster';
 import { SAVED_TEAMS, SAVED_TEAMS_BY_ID, savedTeamDraft } from './savedTeams';
@@ -205,7 +205,7 @@ describe('saved teams', () => {
     ]);
   });
 
-  it('has the Timberjacks with the cards as listed, Thomas and Nomar out of position', () => {
+  it('has the Timberjacks with the cards as listed, Thomas at 1B and Nomar at 3B', () => {
     const draft = savedTeamDraft(SAVED_TEAMS_BY_ID.timberjacks);
     const label = (id: string) => `${CARDS_BY_ID[id].year} ${CARDS_BY_ID[id].name}`;
     expect(Object.fromEntries(draft.lineup.map((e) => [e.slot, label(e.cardId as string)]))).toEqual({
@@ -236,13 +236,11 @@ describe('saved teams', () => {
     ]);
     const thomas = CARDS_BY_ID['2001-BS-107'] as HitterCard;
     const nomar = CARDS_BY_ID['2001-BS-68'] as HitterCard;
-    expect(fieldingIn(thomas, '1B')).toBe(-2);
-    expect(fieldingIn(nomar, '3B')).toBe(-1);
-    // Once it's edited it's a custom team, and positions count again.
-    expect(draftIssues({ ...draft, capExempt: false, savedTeam: undefined })).toEqual([
-      "Nomar Garciaparra can't play 3B",
-      "Frank Thomas can't play 1B",
-    ]);
+    // A DH plays first and an infielder plays anywhere in the infield, at +0 off their cards.
+    expect(fieldingAt(thomas, '1B')).toBe(0);
+    expect(fieldingAt(nomar, '3B')).toBe(0);
+    // That holds for every team, so the lineup stays legal after an edit too.
+    expect(draftIssues({ ...draft, capExempt: false, savedTeam: undefined })).toEqual([]);
   });
 
   it('cuts later charts off at 20 and keeps those cards out of the building pool', () => {
@@ -265,6 +263,21 @@ describe('saved teams', () => {
     const home = toTeamSetup(savedTeamDraft(SAVED_TEAMS_BY_ID.timberjacks));
     expect(playGame(away, home, 7).winner).not.toBeNull();
     expect(playGame(home, away, 8).winner).not.toBeNull();
+  });
+});
+
+describe('positions', () => {
+  it('puts real and random teams at the positions on their cards, even with the infield rule', () => {
+    const onCard = (draft: ReturnType<typeof emptyDraft> | null, label: string) => {
+      for (const entry of draft?.lineup ?? []) {
+        expect(cardFieldingAt(CARDS_BY_ID[entry.cardId as string] as HitterCard, entry.slot), `${label} ${entry.slot}`).not.toBeNull();
+      }
+    };
+    for (const year of YEARS) for (const team of TEAMS) onCard(realTeamDraft({ year, code: team.code }), `${year} ${team.code}`);
+    for (let seed = 1; seed <= 20; seed++) onCard(autoFill(emptyDraft('Random'), seededRandom(seed)), `random ${seed}`);
+    const yankees = realTeamDraft({ year: 2001, code: 'NYY' });
+    const slotOf = (name: string) => yankees?.lineup.find((e) => CARDS_BY_ID[e.cardId as string].name === name)?.slot;
+    expect([slotOf('Derek Jeter'), slotOf('Tino Martinez')]).toEqual(['SS', '1B']);
   });
 });
 
