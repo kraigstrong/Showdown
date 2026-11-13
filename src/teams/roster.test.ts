@@ -28,6 +28,13 @@ describe('the card list', () => {
     }
   });
 
+  it('caps On-Base at 10 on every card, including the few printed higher', () => {
+    const hitters = [...ALL_CARDS, ...OTHER_YEAR_CARDS].filter((c): c is HitterCard => c.kind === 'hitter');
+    expect(Math.max(...hitters.map((c) => c.onBase))).toBe(10);
+    // Printed 11, 11 and 12.
+    for (const id of ['2001-BS-310', '2001-BS-450', '2002-BS-173']) expect((CARDS_BY_ID[id] as HitterCard).onBase, id).toBe(10);
+  });
+
   it('has Matt Walbeck at C+7', () => {
     const card = CARDS_BY_ID['2000-BS-15'] as HitterCard;
     expect(card.name).toBe('Matt Walbeck');
@@ -303,6 +310,39 @@ describe('saved teams', () => {
     expect(applyPlatoons(mariners, 'L')).toBe(mariners);
   });
 
+  it('has the Wiffleballers in the batting order as given', () => {
+    const draft = savedTeamDraft(SAVED_TEAMS_BY_ID.wiffleballers);
+    const label = (id: string) => `${CARDS_BY_ID[id].year} ${CARDS_BY_ID[id].name}`;
+    expect(draft.lineup.map((e) => `${e.slot} ${label(e.cardId as string)}`)).toEqual([
+      'LF 2005 Scott Podsednik',
+      'RF 2000 Bobby Abreu',
+      '3B 2000 Chipper Jones',
+      '1B 2000 Andres Galarraga',
+      'CF 2001 Andruw Jones',
+      'DH 2002 Adam Dunn',
+      'C 2002 Paul Lo Duca',
+      '2B 2002 Marcus Giles',
+      'SS 2004 Rafael Furcal',
+    ]);
+    expect(draft.rotation.map((id) => label(id as string))).toEqual([
+      '2000 Pedro Martinez',
+      '2003 Jarrod Washburn',
+      '2001 Greg Maddux',
+      '2000 Kerry Wood',
+      '2000 Brad Radke',
+    ]);
+    expect(draft.bullpen.map(label)).toEqual([
+      '2005 Tim Spooneybarger',
+      '2000 Ugueth Urbina',
+      '2002 John Smoltz',
+      '2004 Tom Gordon',
+      '2000 Billy Koch',
+      '2002 Jorge Julio',
+    ]);
+    // Smoltz comes out of the bullpen, so it's his reliever card.
+    expect((CARDS_BY_ID['2002-TD-150'] as { role: string }).role).toBe('Reliever');
+  });
+
   it('cuts later charts off at 20 and keeps those cards out of the building pool', () => {
     const pool = new Set(ALL_CARDS.map((c) => c.id));
     const used = new Set(SAVED_TEAMS.flatMap((team) => draftCardIds(savedTeamDraft(team))));
@@ -327,6 +367,8 @@ describe('saved teams', () => {
     const chads = toTeamSetup(applyPlatoons(savedTeamDraft(SAVED_TEAMS_BY_ID['hanging-chads']), 'L'));
     expect(chads.lineup.at(-1)?.cardId).toBe('2000-BS-298');
     expect(playGame(chads, home, 9).winner).not.toBeNull();
+    const wiffle = toTeamSetup(savedTeamDraft(SAVED_TEAMS_BY_ID.wiffleballers));
+    expect(playGame(wiffle, chads, 10).winner).not.toBeNull();
   });
 });
 

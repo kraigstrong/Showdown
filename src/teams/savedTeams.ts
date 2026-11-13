@@ -117,6 +117,37 @@ export const SAVED_TEAMS: SavedTeam[] = [
     ],
     bench: [],
   },
+  {
+    id: 'wiffleballers',
+    name: 'Wiffleballers',
+    lineup: [
+      { slot: 'LF', cardId: '2005-BS-184' }, // 2005 Scott Podsednik (base set, MIL), a CF card: outfield, +0 in LF
+      { slot: 'RF', cardId: '2000-BS-327' }, // 2000 Bobby Abreu
+      { slot: '3B', cardId: '2000-BS-37' }, // 2000 Chipper Jones
+      { slot: '1B', cardId: '2000-PR-12' }, // 2000 Andres Galarraga
+      { slot: 'CF', cardId: '2001-BS-36' }, // 2001 Andruw Jones
+      { slot: 'DH', cardId: '2002-BS-91' }, // 2002 Adam Dunn (base set)
+      { slot: 'C', cardId: '2002-BS-173' }, // 2002 Paul Lo Duca
+      { slot: '2B', cardId: '2002-BS-27' }, // 2002 Marcus Giles (base set)
+      { slot: 'SS', cardId: '2004-BS-24' }, // 2004 Rafael Furcal
+    ],
+    rotation: [
+      '2000-BS-71', // 2000 Pedro Martinez
+      '2003-BS-12', // 2003 Jarrod Washburn
+      '2001-BS-42', // 2001 Greg Maddux
+      '2000-PR-29', // 2000 Kerry Wood
+      '2000-BS-258', // 2000 Brad Radke
+    ],
+    bullpen: [
+      '2005-BS-136', // 2005 Tim Spooneybarger
+      '2000-BS-273', // 2000 Ugueth Urbina
+      '2002-TD-150', // 2002 John Smoltz (Trading Deadline reliever card; no base-set card)
+      '2004-BS-77', // 2004 Tom Gordon (base set, CHW)
+      '2000-BS-457', // 2000 Billy Koch
+      '2002-TD-141', // 2002 Jorge Julio
+    ],
+    bench: [],
+  },
 ];
 
 export const SAVED_TEAMS_BY_ID: Record<string, SavedTeam> = Object.fromEntries(SAVED_TEAMS.map((team) => [team.id, team]));
