@@ -29,9 +29,24 @@ const OTHER_YEAR_CARDS = new Set([
   '2002-BS-231', // Andy Pettitte
   '2002-BS-233', // Mariano Rivera
   '2002-PR-75', // Kazuhisa Ishii
+  // Wiffleballers
+  '2002-BS-27', // Marcus Giles
+  '2002-BS-91', // Adam Dunn
+  '2002-BS-173', // Paul Lo Duca
+  '2002-TD-141', // Jorge Julio
+  '2002-TD-150', // John Smoltz
+  '2003-BS-12', // Jarrod Washburn
+  '2004-BS-24', // Rafael Furcal
+  '2004-BS-77', // Tom Gordon
+  '2005-BS-136', // Tim Spooneybarger
+  '2005-BS-184', // Scott Podsednik
 ]);
 const CHART_COLUMNS = ['PU', 'SO', 'GB', 'FB', 'BB', '1B', '1B+', '2B', '3B', 'HR'];
 const ROLES = { STARTER: 'Starter', RELIEVER: 'Reliever', CLOSER: 'Closer' };
+// House rules: On-Base tops out at 10 and Speed at 20. A few 2001 cards print
+// On-Base 11 and later ones up to 12; later Speed runs as high as 24.
+const MAX_ON_BASE = 10;
+const MAX_SPEED = 20;
 
 // Corrections to the snapshot, confirmed against a second source.
 const FIXES = {
@@ -139,8 +154,8 @@ function toCard(row) {
   return {
     ...base,
     kind: 'hitter',
-    onBase: Number(row.Command),
-    speed: Number(row.Speed),
+    onBase: Math.min(Number(row.Command), MAX_ON_BASE),
+    speed: Math.min(Number(row.Speed), MAX_SPEED),
     positions: readPositions(row),
   };
 }
