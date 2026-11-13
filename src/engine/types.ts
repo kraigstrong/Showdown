@@ -83,8 +83,7 @@ export interface BatterLine {
 }
 
 export interface PitcherLine {
-  /** Innings charged against his IP, including the current one. */
-  innings: number;
+  /** Outs he's recorded, which is also what his IP is counted in. */
   outs: number;
   h: number;
   r: number;
@@ -127,9 +126,9 @@ export type Phase =
   | { kind: 'pitch' }
   | { kind: 'swing'; on: 'pitcher' | 'batter' }
   | { kind: 'doublePlay' }
-  | { kind: 'send'; play: 'hit' | 'fly'; eligible: number[]; twoOutsBefore: boolean }
-  | { kind: 'aim'; play: ThrowPlay; attempts: Attempt[]; twoOutsBefore: boolean }
-  | { kind: 'throw'; play: ThrowPlay; attempts: Attempt[]; targetFrom: number; twoOutsBefore: boolean }
+  | { kind: 'send'; play: 'hit' | 'fly'; eligible: number[] }
+  | { kind: 'aim'; play: ThrowPlay; attempts: Attempt[] }
+  | { kind: 'throw'; play: ThrowPlay; attempts: Attempt[]; targetFrom: number }
   | { kind: 'over' };
 
 export type GameEvent =

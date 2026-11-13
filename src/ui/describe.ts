@@ -137,7 +137,7 @@ export function promptDetail(s: GameState): string | null {
     }
     case 'throw': {
       const attempt = phase.attempts.find((a) => a.from === phase.targetFrom) as Attempt;
-      const { bonus, target, outChance } = throwNumbers(s, phase.play, attempt, phase.twoOutsBefore);
+      const { bonus, target, outChance } = throwNumbers(s, phase.play, attempt);
       const label = phase.play === 'steal' ? 'catcher' : 'outfield';
       return `Roll + ${label} ${bonus}. Beat ${target} to get him (${percent(outChance)}).`;
     }
@@ -146,8 +146,8 @@ export function promptDetail(s: GameState): string | null {
   }
 }
 
-function attemptOdds(s: GameState, attempt: Attempt, play: 'hit' | 'fly' | 'steal', twoOutsBefore: boolean): string {
-  return `${percent(throwNumbers(s, play, attempt, twoOutsBefore).outChance)} out`;
+function attemptOdds(s: GameState, attempt: Attempt, play: 'hit' | 'fly' | 'steal'): string {
+  return `${percent(throwNumbers(s, play, attempt).outChance)} out`;
 }
 
 function attemptsFrom(s: GameState, from: number[]): Attempt[] {
@@ -178,13 +178,13 @@ export function choiceText(s: GameState, action: Action): ChoiceText {
       if (attempts.length > 1) {
         return {
           label: 'Double steal',
-          detail: attempts.map((a) => `${nameOf(s, a.runnerId)} ${attemptOdds(s, a, 'steal', false)}`).join(', '),
+          detail: attempts.map((a) => `${nameOf(s, a.runnerId)} ${attemptOdds(s, a, 'steal')}`).join(', '),
         };
       }
       const [attempt] = attempts;
       return {
         label: `${nameOf(s, attempt.runnerId)} steals ${BASE_NAMES[attempt.to]}`,
-        detail: attemptOdds(s, attempt, 'steal', false),
+        detail: attemptOdds(s, attempt, 'steal'),
       };
     }
     case 'SEND': {
@@ -195,14 +195,14 @@ export function choiceText(s: GameState, action: Action): ChoiceText {
         return {
           label: 'Send both',
           detail: attempts
-            .map((a) => `${nameOf(s, a.runnerId)} ${attemptOdds(s, a, phase.play, phase.twoOutsBefore)}`)
+            .map((a) => `${nameOf(s, a.runnerId)} ${attemptOdds(s, a, phase.play)}`)
             .join(', '),
         };
       }
       const [attempt] = attempts;
       return {
         label: `Send ${nameOf(s, attempt.runnerId)} ${attempt.to === 3 ? 'home' : `to ${BASE_NAMES[attempt.to]}`}`,
-        detail: attemptOdds(s, attempt, phase.play, phase.twoOutsBefore),
+        detail: attemptOdds(s, attempt, phase.play),
       };
     }
     case 'AIM': {
@@ -210,7 +210,7 @@ export function choiceText(s: GameState, action: Action): ChoiceText {
       const attempt = phase.attempts.find((a) => a.from === action.from) as Attempt;
       return {
         label: `Throw at ${nameOf(s, attempt.runnerId)}`,
-        detail: `Going ${attempt.to === 3 ? 'home' : `to ${BASE_NAMES[attempt.to]}`}, ${attemptOdds(s, attempt, phase.play, phase.twoOutsBefore)}`,
+        detail: `Going ${attempt.to === 3 ? 'home' : `to ${BASE_NAMES[attempt.to]}`}, ${attemptOdds(s, attempt, phase.play)}`,
       };
     }
     case 'PINCH_HIT': {

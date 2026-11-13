@@ -80,8 +80,15 @@ export function fieldingAt(card: HitterCard, slot: LineupSlot): number | null {
 }
 
 /** The penalty on every pitch: 1 for each inning past the pitcher's IP. */
-export function fatigueOf(card: PitcherCard, line: Pick<PitcherLine, 'innings'>): number {
-  return Math.max(0, line.innings - card.ip);
+/**
+ * Control lost to fatigue. House rule: IP is counted in outs, 3 to an inning, so an
+ * IP 1 reliever tires after 3 outs and an IP 6 starter after 18, wherever in an
+ * inning those come. He loses 1 once he's recorded that many, and 1 more for every
+ * 3 outs after that.
+ */
+export function fatigueOf(card: PitcherCard, line: Pick<PitcherLine, 'outs'>): number {
+  const pastIp = line.outs - card.ip * 3;
+  return pastIp < 0 ? 0 : Math.floor(pastIp / 3) + 1;
 }
 
 /** The chance a d20 plus the bonus beats the target. Ties go to the runner. */

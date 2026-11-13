@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, createGame, getPrompt, IllegalActionError, infieldTotal, runs, throwNumbers } from './game';
+import { applyAction, createGame, currentFatigue, getPrompt, IllegalActionError, infieldTotal, runs, throwNumbers } from './game';
 import { cardFieldingAt, chanceToBeat, chartRanges, fatigueOf, fieldingAt, resultForRoll } from './rules';
 import type { Action, Chart, GameCard, GameState, HitterCard, LineupSlot, PitcherCard, TeamSetup } from './types';
 
@@ -211,7 +211,7 @@ describe('starting pitchers', () => {
     expect(s.teams.away.starterId).toBe('aSP3');
     expect(s.teams.away.pitchersUsed).toEqual(['aSP3']);
     expect(s.teams.home.pitcherId).toBe('hSP2');
-    expect(s.teams.home.pitching.hSP2.innings).toBe(1);
+    expect(s.teams.home.pitching.hSP2.outs).toBe(0);
   });
 
   it('falls back to the ace if the pick is not in the rotation', () => {
@@ -230,15 +230,20 @@ describe('the pitch', () => {
     expect(lastOf(act(s, ROLL, 4), 'pitch').total).toBe(7);
   });
 
-  it('subtracts one per inning past IP, from the rulebook example', () => {
-    expect(fatigueOf(pitcher('x', { ip: 6 }), { innings: 9 })).toBe(3);
-    expect(fatigueOf(pitcher('x', { ip: 1 }), { innings: 3 })).toBe(2);
-    expect(fatigueOf(pitcher('x', { ip: 6 }), { innings: 6 })).toBe(0);
+  it('counts IP in outs: 1 off once he has his IP in outs, and 1 more every 3 outs after', () => {
+    // The rulebook example in outs: an IP 6 starter going into the 9th has 24.
+    expect(fatigueOf(pitcher('x', { ip: 6 }), { outs: 24 })).toBe(3);
+    expect(fatigueOf(pitcher('x', { ip: 6 }), { outs: 17 })).toBe(0);
+    expect(fatigueOf(pitcher('x', { ip: 6 }), { outs: 18 })).toBe(1);
+    // An IP 1 reliever stays fresh until he's recorded 3 outs, however they're spread.
+    expect(fatigueOf(pitcher('x', { ip: 1 }), { outs: 2 })).toBe(0);
+    expect(fatigueOf(pitcher('x', { ip: 1 }), { outs: 3 })).toBe(1);
+    expect(fatigueOf(pitcher('x', { ip: 1 }), { outs: 6 })).toBe(2);
   });
 
   it('applies fatigue to the total pitch once a pitcher is tired', () => {
     let s = newGame();
-    s = { ...s, teams: { ...s.teams, home: { ...s.teams.home, pitching: { ...s.teams.home.pitching, hSP1: { ...s.teams.home.pitching.hSP1, innings: 9 } } } } };
+    s = { ...s, teams: { ...s.teams, home: { ...s.teams.home, pitching: { ...s.teams.home.pitching, hSP1: { ...s.teams.home.pitching.hSP1, outs: 24 } } } } };
     const after = act(s, ROLL, 5);
     const event = lastOf(after, 'pitch');
     expect(event.fatigue).toBe(3);
@@ -426,7 +431,8 @@ describe('tagging up', () => {
 describe('extra bases on hits', () => {
   it('matches the rulebook example: run counts even on the third out', () => {
     // 2 outs, Soriano on third, Jeter on second, Giambi on first. Single, send both,
-    // outfield throws at Giambi. Speed 12 + 5 for two outs = 17. Roll 13 + 5 = 18: out.
+    // outfield throws at Giambi. The book adds +5 for two outs (17); we don't, so the
+    // target is his Speed 12. Roll 13 + 5 = 18: out either way.
     const speeds = { a1B: 12 };
     let s = newGame({
       away: { '1B': { speed: speeds.a1B } },
@@ -439,20 +445,24 @@ describe('extra bases on hits', () => {
     s = act(s, { type: 'SEND', from: [2, 1] });
     expect(s.phase.kind).toBe('aim');
     s = act(s, { type: 'AIM', from: 1 });
-    const numbers = throwNumbers(s, 'hit', { runnerId: 'a1B', from: 1, to: 2 }, true);
-    expect(numbers).toMatchObject({ bonus: 5, target: 17 });
+    const numbers = throwNumbers(s, 'hit', { runnerId: 'a1B', from: 1, to: 2 });
+    expect(numbers).toMatchObject({ bonus: 5, target: 12 });
     const after = act(s, ROLL, 13);
-    expect(lastOf(after, 'throw')).toMatchObject({ total: 18, target: 17, out: true });
+    expect(lastOf(after, 'throw')).toMatchObject({ total: 18, target: 12, out: true });
     expect(runs(after, 'away')).toBe(2);
     expect(after.half).toBe('bottom');
   });
 
-  it('adds both +5s when going home with two outs', () => {
-    let s = place(newGame(), [null, 'a2B', null], 2);
-    s = swing(s, '1B', 'aC');
-    s = act(s, { type: 'SEND', from: [2] });
-    if (s.phase.kind !== 'throw') throw new Error('expected a throw');
-    expect(throwNumbers(s, 'hit', s.phase.attempts[0], s.phase.twoOutsBefore).target).toBe(25);
+  it('adds only +5 going home, with or without two outs', () => {
+    // Speed B (15) scoring from second on a single against a +4 outfield: 20% out.
+    for (const outs of [0, 2]) {
+      let s = newGame({ home: { LF: { positions: [{ pos: 'LF/RF', fielding: 2 }] }, CF: { positions: [{ pos: 'CF', fielding: 2 }] } } });
+      s = place(s, [null, 'a2B', null], outs);
+      s = swing(s, '1B', 'aC');
+      s = act(s, { type: 'SEND', from: [2] });
+      if (s.phase.kind !== 'throw') throw new Error('expected a throw');
+      expect(throwNumbers(s, 'hit', s.phase.attempts[0]), `${outs} outs`).toEqual({ bonus: 4, target: 20, outChance: 0.2 });
+    }
   });
 
   it('never lets the batter try for an extra base', () => {
@@ -517,7 +527,7 @@ describe('stealing', () => {
     s = { ...s, phase: { kind: 'offense' } };
     s = act(s, { type: 'STEAL', from: [1] });
     if (s.phase.kind !== 'throw') throw new Error('expected a throw');
-    expect(throwNumbers(s, 'steal', s.phase.attempts[0], false).bonus).toBe(5);
+    expect(throwNumbers(s, 'steal', s.phase.attempts[0]).bonus).toBe(5);
   });
 
   it('lets the defense pick a runner on a double steal, and the other one advances', () => {
@@ -577,12 +587,20 @@ describe('substitutions', () => {
     expect(getPrompt(shelled)?.actions).toContainEqual({ type: 'CHANGE_PITCHER', cardId: 'hRP' });
   });
 
-  it('charges a reliever a full inning when he enters mid-inning', () => {
+  it('counts a reliever by the outs he gets, not the inning he came in', () => {
     const s = { ...atInning(newGame(), 5, 'top'), phase: { kind: 'pitch' as const } };
     const after = act(s, { type: 'CHANGE_PITCHER', cardId: 'hRP' });
-    expect(after.teams.home.pitching.hRP.innings).toBe(1);
+    expect(after.teams.home.pitching.hRP.outs).toBe(0);
     expect(after.teams.home.pitcherId).toBe('hRP');
     expect(after.teams.home.bullpen).toEqual([]);
+    // The IP 1 reliever got the last out of an inning: still fresh the next, until he has 3.
+    const withOuts = (outs: number): GameState => ({
+      ...after,
+      teams: { ...after.teams, home: { ...after.teams.home, pitching: { ...after.teams.home.pitching, hRP: { ...after.teams.home.pitching.hRP, outs } } } },
+    });
+    expect(currentFatigue(withOuts(1))).toBe(0);
+    expect(currentFatigue(withOuts(2))).toBe(0);
+    expect(currentFatigue(withOuts(3))).toBe(1);
   });
 
   it('keeps the bench out until the 7th, or the bottom of the 6th for the home team', () => {
