@@ -51,6 +51,7 @@ function positionCovers(pos: CardPosition, slot: LineupSlot): boolean {
 
 /** The hitter's Fielding at a slot, or null if he doesn't qualify there. Anyone can DH. */
 const INFIELD_POSITIONS: CardPosition[] = ['1B', '2B', '3B', 'SS', 'IF'];
+const OUTFIELD_POSITIONS: CardPosition[] = ['LF', 'CF', 'RF', 'LF/RF', 'OF'];
 
 /** His Fielding at a spot his card lists, or null if it doesn't list it. Anyone can DH. */
 export function cardFieldingAt(card: HitterCard, slot: LineupSlot): number | null {
@@ -63,15 +64,17 @@ export function cardFieldingAt(card: HitterCard, slot: LineupSlot): number | nul
 }
 
 /**
- * His Fielding at a spot, or null if he can't play there. Our house rule: any
- * infielder can play anywhere in the infield, and a DH can play first base, at +0
- * when the spot isn't on his card.
+ * His Fielding at a spot, or null if he can't play there. Our house rules: any
+ * infielder can play anywhere in the infield, any outfielder anywhere in the
+ * outfield, and a DH can play first base, at +0 when the spot isn't on his card.
  */
 export function fieldingAt(card: HitterCard, slot: LineupSlot): number | null {
   const listed = cardFieldingAt(card, slot);
   if (listed !== null) return listed;
   const isInfielder = card.positions.some((p) => INFIELD_POSITIONS.includes(p.pos));
   if (isInfielder && (INFIELD as LineupSlot[]).includes(slot)) return 0;
+  const isOutfielder = card.positions.some((p) => OUTFIELD_POSITIONS.includes(p.pos));
+  if (isOutfielder && (OUTFIELD as LineupSlot[]).includes(slot)) return 0;
   if (slot === '1B' && card.positions.some((p) => p.pos === 'DH')) return 0;
   return null;
 }

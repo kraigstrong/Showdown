@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, createGame, getPrompt, IllegalActionError, infieldTotal, runs, throwNumbers } from './game';
-import { chanceToBeat, chartRanges, fatigueOf, fieldingAt, resultForRoll } from './rules';
+import { cardFieldingAt, chanceToBeat, chartRanges, fatigueOf, fieldingAt, resultForRoll } from './rules';
 import type { Action, Chart, GameCard, GameState, HitterCard, LineupSlot, PitcherCard, TeamSetup } from './types';
 
 // ---------------------------------------------------------------- helpers
@@ -154,9 +154,9 @@ describe('positions', () => {
   it('lets OF cover all three outfield spots and LF/RF only two', () => {
     const of = hitter('x', 'LF', { positions: [{ pos: 'OF', fielding: 2 }] });
     const corner = hitter('y', 'LF', { positions: [{ pos: 'LF/RF', fielding: 1 }] });
-    expect(fieldingAt(of, 'CF')).toBe(2);
-    expect(fieldingAt(corner, 'RF')).toBe(1);
-    expect(fieldingAt(corner, 'CF')).toBeNull();
+    expect(cardFieldingAt(of, 'CF')).toBe(2);
+    expect(cardFieldingAt(corner, 'RF')).toBe(1);
+    expect(cardFieldingAt(corner, 'CF')).toBeNull();
   });
 
   it('lets any hitter DH', () => {
@@ -174,6 +174,18 @@ describe('positions', () => {
     expect(fieldingAt(dh, '2B')).toBeNull();
     expect(fieldingAt(hitter('z', 'CF', { positions: [{ pos: 'CF', fielding: 2 }] }), '1B')).toBeNull();
     expect(fieldingAt(hitter('c', 'C', { positions: [{ pos: 'C', fielding: 5 }] }), '1B')).toBeNull();
+  });
+
+  it('lets an outfielder play anywhere in the outfield, at +0 off his card', () => {
+    const center = hitter('x', 'CF', { positions: [{ pos: 'CF', fielding: 2 }] });
+    expect(fieldingAt(center, 'CF')).toBe(2);
+    expect(fieldingAt(center, 'LF')).toBe(0);
+    const corner = hitter('y', 'LF', { positions: [{ pos: 'LF/RF', fielding: 1 }] });
+    expect(fieldingAt(corner, 'RF')).toBe(1);
+    expect(fieldingAt(corner, 'CF')).toBe(0);
+    expect(fieldingAt(corner, '2B')).toBeNull();
+    expect(fieldingAt(hitter('z', 'SS', { positions: [{ pos: 'SS', fielding: 3 }] }), 'CF')).toBeNull();
+    expect(fieldingAt(hitter('d', 'DH'), 'LF')).toBeNull();
   });
 
   it('counts a DH at first as +0 in the infield total for a double play', () => {
