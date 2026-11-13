@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyAction, createGame, getPrompt, IllegalActionError, infieldTotal, runs, throwNumbers } from './game';
-import { chanceToBeat, chartRanges, fatigueOf, fieldingAt, fieldingIn, resultForRoll } from './rules';
+import { chanceToBeat, chartRanges, fatigueOf, fieldingAt, resultForRoll } from './rules';
 import type { Action, Chart, GameCard, GameState, HitterCard, LineupSlot, PitcherCard, TeamSetup } from './types';
 
 // ---------------------------------------------------------------- helpers
@@ -163,16 +163,22 @@ describe('positions', () => {
     expect(fieldingAt(hitter('x', 'C'), 'DH')).toBe(0);
   });
 
-  it('plays someone off his card at -1, or -2 if he has no fielding position', () => {
+  it('lets an infielder play anywhere in the infield and a DH play first, at +0 off his card', () => {
     const shortstop = hitter('x', 'SS', { positions: [{ pos: 'SS', fielding: 3 }] });
-    expect(fieldingIn(shortstop, 'SS')).toBe(3);
-    expect(fieldingIn(shortstop, '3B')).toBe(-1);
-    expect(fieldingIn(hitter('y', 'DH'), '1B')).toBe(-2);
+    expect(fieldingAt(shortstop, 'SS')).toBe(3);
+    expect(fieldingAt(shortstop, '3B')).toBe(0);
+    expect(fieldingAt(shortstop, 'LF')).toBeNull();
+    expect(fieldingAt(shortstop, 'C')).toBeNull();
+    const dh = hitter('y', 'DH');
+    expect(fieldingAt(dh, '1B')).toBe(0);
+    expect(fieldingAt(dh, '2B')).toBeNull();
+    expect(fieldingAt(hitter('z', 'CF', { positions: [{ pos: 'CF', fielding: 2 }] }), '1B')).toBeNull();
+    expect(fieldingAt(hitter('c', 'C', { positions: [{ pos: 'C', fielding: 5 }] }), '1B')).toBeNull();
   });
 
-  it('counts an out-of-position fielder in the infield total for a double play', () => {
+  it('counts a DH at first as +0 in the infield total for a double play', () => {
     const s = newGame({ home: { '1B': { positions: [{ pos: 'DH', fielding: 0 }] }, SS: { positions: [{ pos: 'SS', fielding: 3 }] } } });
-    expect(infieldTotal(s, 'home')).toBe(3 - 2);
+    expect(infieldTotal(s, 'home')).toBe(3);
   });
 });
 
