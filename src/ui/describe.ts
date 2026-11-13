@@ -3,8 +3,12 @@ import {
   currentBatterId,
   currentFatigue,
   currentPitcherId,
+  defenseSide,
   doublePlayNumbers,
+  fielderAt,
   hitterCard,
+  homeThrowFielders,
+  isHomeThrow,
   pitcherCard,
   speedLabel,
   throwNumbers,
@@ -72,10 +76,14 @@ export function eventLine(s: GameState, e: GameEvent): string | null {
       return `Double-play throw: ${e.roll} + ${e.bonus} = ${e.total} vs Speed ${e.target}. ${
         e.out ? `${nameOf(s, e.batterId)} is out. Double play!` : `${nameOf(s, e.batterId)} beats it out.`
       }`;
-    case 'throw':
-      return `${nameOf(s, e.runnerId)} ${e.play === 'steal' ? 'runs for' : 'goes for'} ${BASE_NAMES[e.to]}: ${e.roll} + ${e.bonus} = ${e.total} vs ${e.target}. ${
+    case 'fielder':
+      return `Rolled ${e.roll}: ${nameOf(s, e.fielderId)} makes the throw from ${e.slot}.`;
+    case 'throw': {
+      const thrower = e.fielderId ? `${nameOf(s, e.fielderId)}'s throw: ` : '';
+      return `${nameOf(s, e.runnerId)} ${e.play === 'steal' ? 'runs for' : 'goes for'} ${BASE_NAMES[e.to]}. ${thrower}${e.roll} + ${e.bonus} = ${e.total} vs ${e.target}. ${
         e.out ? 'Out!' : 'Safe!'
       }`;
+    }
     case 'advance':
       return e.reason === 'single+'
         ? `${nameOf(s, e.runnerId)} takes second on the single+.`
@@ -114,8 +122,11 @@ export function promptTitle(s: GameState): string {
 function throwTitle(s: GameState, phase: Extract<Phase, { kind: 'throw' }>): string {
   const attempt = phase.attempts.find((a) => a.from === phase.targetFrom) as Attempt;
   const who = nameOf(s, attempt.runnerId);
-  if (phase.play === 'steal') return `Catcher throws. ${who} is going to ${BASE_NAMES[attempt.to]}`;
-  return `Outfield throws. ${who} is going to ${BASE_NAMES[attempt.to]}`;
+  const where = attempt.to === 3 ? 'home' : `to ${BASE_NAMES[attempt.to]}`;
+  if (phase.play === 'steal') return `Catcher throws. ${who} is going ${where}`;
+  if (isHomeThrow(phase.play, attempt) && !phase.fielder) return `${who} is going home. Who makes the throw?`;
+  const thrower = phase.fielder ? nameOf(s, fielderAt(s, defenseSide(s), phase.fielder)) : 'Outfield';
+  return `${thrower} throws. ${who} is going ${where}`;
 }
 
 /** The math behind the roll that's coming up. */
@@ -137,7 +148,15 @@ export function promptDetail(s: GameState): string | null {
     }
     case 'throw': {
       const attempt = phase.attempts.find((a) => a.from === phase.targetFrom) as Attempt;
-      const { bonus, target, outChance } = throwNumbers(s, phase.play, attempt);
+      const { bonus, target, outChance } = throwNumbers(s, phase.play, attempt, phase.fielder);
+      if (isHomeThrow(phase.play, attempt)) {
+        if (!phase.fielder) {
+          const [corner, center] = homeThrowFielders(s).map((slot) => `${nameOf(s, fielderAt(s, defenseSide(s), slot))} (${slot})`);
+          return `1–10 ${corner}, 11–20 ${center}. Then he rolls + his arm and must beat ${target} (${percent(outChance)} out).`;
+        }
+        const thrower = nameOf(s, fielderAt(s, defenseSide(s), phase.fielder));
+        return `Roll + ${thrower}'s arm ${bonus}. Beat ${target} to get him (${percent(outChance)}).`;
+      }
       const label = phase.play === 'steal' ? 'catcher' : 'outfield';
       return `Roll + ${label} ${bonus}. Beat ${target} to get him (${percent(outChance)}).`;
     }
@@ -169,6 +188,10 @@ export function choiceText(s: GameState, action: Action): ChoiceText {
         doublePlay: 'Roll the throw',
         throw: 'Roll the throw',
       };
+      if (phase.kind === 'throw' && !phase.fielder) {
+        const attempt = phase.attempts.find((a) => a.from === phase.targetFrom) as Attempt;
+        if (isHomeThrow(phase.play, attempt)) return { label: 'Roll for the thrower' };
+      }
       return { label: labels[phase.kind] ?? 'Roll' };
     }
     case 'PROCEED':

@@ -104,6 +104,16 @@ export function speedLetter(speed: number): string {
   return 'C';
 }
 
+/**
+ * House rule for a runner heading home on a hit or a fly ball: the one outfielder
+ * who throws must beat this, by Speed letter, instead of Speed + 5.
+ */
+export const HOME_THROW_TARGET: Record<string, number> = { A: 20, B: 17, C: 14 };
+
+export function homeThrowTarget(speed: number): number {
+  return HOME_THROW_TARGET[speedLetter(speed)];
+}
+
 /** Speed as the card prints it: a letter through 2001, the number from 2002 on. */
 export function speedLabel(card: Pick<HitterCard, 'speed' | 'year'>): string {
   return card.year >= 2002 ? String(card.speed) : speedLetter(card.speed);

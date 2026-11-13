@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { applyAction, createGame, currentFatigue, getPrompt, IllegalActionError, infieldTotal, runs, throwNumbers } from './game';
-import { cardFieldingAt, chanceToBeat, chartRanges, fatigueOf, fieldingAt, resultForRoll } from './rules';
+import { applyAction, createGame, currentFatigue, getPrompt, homeThrowFielders, IllegalActionError, infieldTotal, runs, throwNumbers } from './game';
+import { cardFieldingAt, chanceToBeat, chartRanges, fatigueOf, fieldingAt, homeThrowTarget, resultForRoll } from './rules';
 import type { Action, Chart, GameCard, GameState, HitterCard, LineupSlot, PitcherCard, TeamSetup } from './types';
 
 // ---------------------------------------------------------------- helpers
@@ -405,14 +405,15 @@ describe('tagging up', () => {
     expect(s.bases).toEqual(['a1B', null, null]);
   });
 
-  it('gives a runner going home +5 on the target and ties to the runner', () => {
+  it('sends a tagging runner home under the throw-home rule, ties to the runner', () => {
     let s = place(newGame(), [null, null, 'a3B']);
     s = swing(s, 'FB', 'aC');
     s = act(s, { type: 'SEND', from: [2] });
     expect(s.phase.kind).toBe('throw');
-    // Speed 15 + 5 going home = 20, and outfield Fielding is 0.
-    const safe = act(s, ROLL, 20);
-    expect(lastOf(safe, 'throw')).toMatchObject({ target: 20, total: 20, out: false });
+    // Roll for the thrower (left fielder, +0 arm), then Speed B needs 17: a tie is safe.
+    s = act(s, ROLL, 1);
+    const safe = act(s, ROLL, 17);
+    expect(lastOf(safe, 'throw')).toMatchObject({ target: 17, total: 17, out: false });
     expect(runs(safe, 'away')).toBe(1);
   });
 
@@ -453,16 +454,87 @@ describe('extra bases on hits', () => {
     expect(after.half).toBe('bottom');
   });
 
-  it('adds only +5 going home, with or without two outs', () => {
-    // Speed B (15) scoring from second on a single against a +4 outfield: 20% out.
-    for (const outs of [0, 2]) {
-      let s = newGame({ home: { LF: { positions: [{ pos: 'LF/RF', fielding: 2 }] }, CF: { positions: [{ pos: 'CF', fielding: 2 }] } } });
+  describe('throws home (house rule)', () => {
+    // Home team's outfield: LF +2, CF +4, RF +1.
+    const outfield = {
+      LF: { positions: [{ pos: 'LF/RF' as const, fielding: 2 }] },
+      CF: { positions: [{ pos: 'CF' as const, fielding: 4 }] },
+      RF: { positions: [{ pos: 'LF/RF' as const, fielding: 1 }] },
+    };
+    // Runner on second (Speed B unless given), the catcher singles, and the runner is sent home.
+    const sendHome = (batterHand: 'L' | 'R' | 'S' = 'R', runnerSpeed = 15, outs = 0) => {
+      let s = newGame({ away: { '2B': { speed: runnerSpeed }, C: { hand: batterHand } }, home: outfield });
       s = place(s, [null, 'a2B', null], outs);
       s = swing(s, '1B', 'aC');
-      s = act(s, { type: 'SEND', from: [2] });
+      return act(s, { type: 'SEND', from: [2] });
+    };
+
+    it('needs 20, 17 or 14 by Speed letter, with no two-out bonus', () => {
+      for (const [speed, target] of [[20, 20], [15, 17], [10, 14], [18, 20], [13, 17], [11, 14]]) {
+        expect(homeThrowTarget(speed), `Speed ${speed}`).toBe(target);
+      }
+      for (const outs of [0, 2]) {
+        const s = sendHome('R', 15, outs);
+        if (s.phase.kind !== 'throw') throw new Error('expected a throw');
+        expect(throwNumbers(s, 'hit', s.phase.attempts[0], 'LF').target).toBe(17);
+      }
+    });
+
+    it('rolls for the thrower first: 1-10 the corner the batter pulls to, 11-20 center', () => {
+      expect(homeThrowFielders(sendHome('R'))).toEqual(['LF', 'CF']);
+      expect(homeThrowFielders(sendHome('L'))).toEqual(['RF', 'CF']);
+      // A switch hitter bats lefty against this right-handed pitcher.
+      expect(homeThrowFielders(sendHome('S'))).toEqual(['RF', 'CF']);
+      const s = sendHome('R');
+      expect(getPrompt(s)).toMatchObject({ actor: 'home', actions: [ROLL] });
+      const corner = act(s, ROLL, 10);
+      expect(lastOf(corner, 'fielder')).toMatchObject({ roll: 10, slot: 'LF', fielderId: 'hLF' });
+      expect(corner.phase).toMatchObject({ kind: 'throw', fielder: 'LF' });
+      expect(corner.bases).toEqual(['aC', null, 'a2B']);
+      expect(act(s, ROLL, 11).phase).toMatchObject({ kind: 'throw', fielder: 'CF' });
+    });
+
+    it("throws with that one outfielder's arm, ties to the runner", () => {
+      const toLeft = act(sendHome('R'), ROLL, 3);
+      // LF arm +2 against Speed B's 17.
+      const tie = act(toLeft, ROLL, 15);
+      expect(lastOf(tie, 'throw')).toMatchObject({ bonus: 2, total: 17, target: 17, out: false, fielderId: 'hLF' });
+      expect(runs(tie, 'away')).toBe(1);
+      const thrownOut = act(toLeft, ROLL, 16);
+      expect(lastOf(thrownOut, 'throw')).toMatchObject({ total: 18, out: true });
+      expect(runs(thrownOut, 'away')).toBe(0);
+      expect(thrownOut.outs).toBe(1);
+    });
+
+    it('shows the odds before the send as the average of the two possible throwers', () => {
+      const s = sendHome('R');
       if (s.phase.kind !== 'throw') throw new Error('expected a throw');
-      expect(throwNumbers(s, 'hit', s.phase.attempts[0]), `${outs} outs`).toEqual({ bonus: 4, target: 20, outChance: 0.2 });
-    }
+      // LF +2 needs 16+ (25%), CF +4 needs 14+ (35%).
+      expect(throwNumbers(s, 'hit', s.phase.attempts[0]).outChance).toBeCloseTo(0.3);
+    });
+
+    it('uses the same rule for a runner tagging up from third', () => {
+      let s = newGame({ home: outfield });
+      s = place(s, [null, null, 'a3B']);
+      s = swing(s, 'FB', 'aC');
+      expect(s.phase.kind).toBe('send');
+      s = act(s, { type: 'SEND', from: [2] });
+      expect(s.phase).toMatchObject({ kind: 'throw', play: 'fly' });
+      s = act(s, ROLL, 20);
+      expect(s.phase).toMatchObject({ fielder: 'CF' });
+      expect(lastOf(act(s, ROLL, 13), 'throw')).toMatchObject({ bonus: 4, total: 17, target: 17, out: false });
+    });
+
+    it('leaves other extra bases on the whole outfield against Speed', () => {
+      let s = newGame({ home: outfield });
+      s = place(s, ['a1B', null, null]);
+      s = swing(s, '1B', 'aC');
+      s = act(s, { type: 'SEND', from: [1] });
+      if (s.phase.kind !== 'throw') throw new Error('expected a throw');
+      expect(throwNumbers(s, 'hit', s.phase.attempts[0])).toMatchObject({ bonus: 7, target: 15 });
+      expect(getPrompt(s)?.actions).toEqual([ROLL]);
+      expect(lastOf(act(s, ROLL, 9), 'throw')).toMatchObject({ total: 16, out: true });
+    });
   });
 
   it('never lets the batter try for an extra base', () => {

@@ -1,7 +1,7 @@
 // The rules of the game as pure functions: state and action in, new state out.
 // Dice live here too, so a future server can own the rolls and the state, and
 // the screens only ever send actions and show results.
-import { chanceToBeat, fatigueOf, FIELD_SLOTS, fieldingAt, INFIELD, OUTFIELD, resultForRoll } from './rules';
+import { chanceToBeat, fatigueOf, FIELD_SLOTS, fieldingAt, homeThrowTarget, INFIELD, OUTFIELD, resultForRoll } from './rules';
 import type {
   Action,
   Attempt,
@@ -11,7 +11,9 @@ import type {
   GameSetup,
   GameState,
   HitterCard,
+  LineupEntry,
   LineupSlot,
+  OutfieldSlot,
   Phase,
   PitcherCard,
   PitcherLine,
@@ -26,9 +28,9 @@ import type {
 export const HOME = 3;
 
 /** Innings before which a starter can't be pulled, unless he's given up enough runs. */
-const STARTER_SAFE_THROUGH_INNING = 4;
-const STARTER_RUN_LIMIT = 10;
-const BENCH_ALLOWED_FROM_INNING = 7;
+export const STARTER_SAFE_THROUGH_INNING = 4;
+export const STARTER_RUN_LIMIT = 10;
+export const BENCH_ALLOWED_FROM_INNING = 7;
 
 export class IllegalActionError extends Error {}
 
@@ -90,23 +92,57 @@ export function catcherArm(s: GameState, side: Side): number {
   return fieldingTotal(s, side, ['C']);
 }
 
+/** A runner heading home on a hit or a fly ball, where one outfielder makes the throw. */
+export function isHomeThrow(play: ThrowPlay, attempt: Attempt): boolean {
+  return play !== 'steal' && attempt.to === HOME;
+}
+
+/**
+ * Who can throw home, by which way the batter swings: a lefty pulls to right, a
+ * righty to left, and a switch hitter bats opposite the pitcher. The defense rolls:
+ * 1-10 the corner outfielder, 11-20 the center fielder.
+ */
+export function homeThrowFielders(s: GameState): [OutfieldSlot, OutfieldSlot] {
+  const batter = hitterCard(s, currentBatterId(s));
+  const bats = batter.hand === 'S' ? (pitcherCard(s, currentPitcherId(s)).hand === 'L' ? 'R' : 'L') : batter.hand;
+  return [bats === 'L' ? 'RF' : 'LF', 'CF'];
+}
+
+export function fielderAt(s: GameState, side: Side, slot: FieldSlot): string {
+  return (s.teams[side].lineup.find((entry) => entry.slot === slot) as LineupEntry).cardId;
+}
+
+function armAt(s: GameState, side: Side, slot: OutfieldSlot): number {
+  return fieldingAt(hitterCard(s, fielderAt(s, side, slot)), slot) ?? 0;
+}
+
 /**
  * The numbers behind a throw: the defense rolls d20 + bonus and must beat the
- * target. House rule: no extra +5 for two outs on extra bases, only +5 going home.
+ * target. House rules: no extra +5 for two outs; on a throw home, one outfielder's
+ * arm against 20/17/14 by Speed letter. Before that outfielder is rolled for, the
+ * bonus and chance are the average of the two who might throw.
  */
-export function throwNumbers(s: GameState, play: ThrowPlay, attempt: Attempt): { bonus: number; target: number; outChance: number } {
+export function throwNumbers(
+  s: GameState,
+  play: ThrowPlay,
+  attempt: Attempt,
+  fielder?: OutfieldSlot,
+): { bonus: number; target: number; outChance: number } {
   const defense = defenseSide(s);
   const speed = hitterCard(s, attempt.runnerId).speed;
-  let bonus: number;
-  let target: number;
   if (play === 'steal') {
-    bonus = catcherArm(s, defense) + (attempt.to === 2 ? 5 : 0);
-    target = speed;
-  } else {
-    bonus = outfieldTotal(s, defense);
-    target = speed + (attempt.to === HOME ? 5 : 0);
+    const bonus = catcherArm(s, defense) + (attempt.to === 2 ? 5 : 0);
+    return { bonus, target: speed, outChance: chanceToBeat(bonus, speed) };
   }
-  return { bonus, target, outChance: chanceToBeat(bonus, target) };
+  if (isHomeThrow(play, attempt)) {
+    const target = homeThrowTarget(speed);
+    const slots = fielder ? [fielder] : homeThrowFielders(s);
+    const arms = slots.map((slot) => armAt(s, defense, slot));
+    const average = (values: number[]) => values.reduce((sum, value) => sum + value, 0) / values.length;
+    return { bonus: average(arms), target, outChance: average(arms.map((arm) => chanceToBeat(arm, target))) };
+  }
+  const bonus = outfieldTotal(s, defense);
+  return { bonus, target: speed, outChance: chanceToBeat(bonus, speed) };
 }
 
 export function doublePlayNumbers(s: GameState): { bonus: number; target: number; outChance: number } {
@@ -509,9 +545,18 @@ function attemptsFor(s: GameState, from: number[]): Attempt[] {
     .map((base) => ({ runnerId: s.bases[base] as string, from: base, to: base + 1 }));
 }
 
+/** First of the two rolls on a throw home: which outfielder makes it. */
+function pickFielder(s: GameState, phase: Extract<Phase, { kind: 'throw' }>) {
+  const roll = rollD20(s);
+  const [corner, center] = homeThrowFielders(s);
+  const slot = roll <= 10 ? corner : center;
+  s.log.push({ t: 'fielder', roll, slot, fielderId: fielderAt(s, defenseSide(s), slot) });
+  s.phase = { ...phase, fielder: slot };
+}
+
 function resolveThrow(s: GameState, phase: Extract<Phase, { kind: 'throw' }>) {
   const targetAttempt = phase.attempts.find((attempt) => attempt.from === phase.targetFrom) as Attempt;
-  const { bonus, target } = throwNumbers(s, phase.play, targetAttempt);
+  const { bonus, target } = throwNumbers(s, phase.play, targetAttempt, phase.fielder);
   const roll = rollD20(s);
   const total = roll + bonus;
   const out = total > target;
@@ -526,6 +571,7 @@ function resolveThrow(s: GameState, phase: Extract<Phase, { kind: 'throw' }>) {
     runnerId: targetAttempt.runnerId,
     from: targetAttempt.from,
     to: targetAttempt.to,
+    ...(phase.fielder ? { fielderId: fielderAt(s, defenseSide(s), phase.fielder) } : {}),
   });
 
   // Lead runner first, so a run on the same play still counts if the trail runner is thrown out.
@@ -603,8 +649,11 @@ function applyRoll(s: GameState) {
       }
       return finishAtBat(s);
     }
-    case 'throw':
+    case 'throw': {
+      const targetAttempt = phase.attempts.find((attempt) => attempt.from === phase.targetFrom) as Attempt;
+      if (isHomeThrow(phase.play, targetAttempt) && !phase.fielder) return pickFielder(s, phase);
       return resolveThrow(s, phase);
+    }
     default:
       throw new IllegalActionError(`Nothing to roll during ${phase.kind}`);
   }

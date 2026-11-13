@@ -6,6 +6,7 @@ export type Half = 'top' | 'bottom';
 
 export type FieldSlot = 'C' | '1B' | '2B' | '3B' | 'SS' | 'LF' | 'CF' | 'RF';
 export type LineupSlot = FieldSlot | 'DH';
+export type OutfieldSlot = 'LF' | 'CF' | 'RF';
 export type CardPosition = FieldSlot | 'LF/RF' | 'OF' | 'IF' | 'DH';
 
 export type SwingResult = 'PU' | 'SO' | 'GB' | 'FB' | 'BB' | '1B' | '1B+' | '2B' | '3B' | 'HR';
@@ -128,7 +129,8 @@ export type Phase =
   | { kind: 'doublePlay' }
   | { kind: 'send'; play: 'hit' | 'fly'; eligible: number[] }
   | { kind: 'aim'; play: ThrowPlay; attempts: Attempt[] }
-  | { kind: 'throw'; play: ThrowPlay; attempts: Attempt[]; targetFrom: number }
+  /** On a throw home the outfielder who throws is rolled for first; fielder is set once he is. */
+  | { kind: 'throw'; play: ThrowPlay; attempts: Attempt[]; targetFrom: number; fielder?: OutfieldSlot }
   | { kind: 'over' };
 
 export type GameEvent =
@@ -160,7 +162,10 @@ export type GameEvent =
       runnerId: string;
       from: number;
       to: number;
+      /** The outfielder who threw, on a throw home. */
+      fielderId?: string;
     }
+  | { t: 'fielder'; roll: number; slot: OutfieldSlot; fielderId: string }
   | { t: 'advance'; runnerId: string; to: number; reason: 'trail' | 'single+' }
   | { t: 'pinchHit'; inId: string; outId: string; side: Side }
   | { t: 'pitchingChange'; inId: string; outId: string; side: Side }
