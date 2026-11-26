@@ -353,6 +353,203 @@ describe('saved teams', () => {
     expect((CARDS_BY_ID['2002-TD-150'] as { role: string }).role).toBe('Reliever');
   });
 
+  it('has the Peacemakers, Front Street Bombers and Homestead Grays as given', () => {
+    const order = (id: string) => savedTeamDraft(SAVED_TEAMS_BY_ID[id]).lineup.map((e) => `${e.slot} ${CARDS_BY_ID[e.cardId as string].name}`);
+    const staff = (id: string) => {
+      const draft = savedTeamDraft(SAVED_TEAMS_BY_ID[id]);
+      return [...draft.rotation, ...draft.bullpen, ...draft.bench].map((cardId) => `${CARDS_BY_ID[cardId as string].year} ${CARDS_BY_ID[cardId as string].name}`);
+    };
+    expect(order('peacemakers')).toEqual([
+      'LF Coco Crisp', 'RF Ray Lankford', 'DH Gary Sheffield', 'C Mike Piazza', 'SS Miguel Tejada',
+      '3B Eric Chavez', '1B Jeff Conine', 'CF Vernon Wells', '2B Mark Grudzielanek',
+    ]);
+    expect(staff('peacemakers')).toEqual([
+      '2002 Vicente Padilla', '2000 Bret Saberhagen', '2005 Rich Harden', '2000 Eric Milton', '2002 Roy Oswalt',
+      '2004 Paul Quantrill', '2000 Mike Remlinger', '2000 Jeff Shaw', '2002 Trevor Hoffman', '2000 Mike Jackson', '2004 LaTroy Hawkins',
+      '2000 Todd Zeile',
+    ]);
+    expect(order('front-street-bombers')).toEqual([
+      '2B Quilvio Veras', 'SS Jeff Kent', 'LF Barry Bonds', '1B Mark McGwire', 'RF David Justice',
+      '3B Jay Bell', 'DH Jeromy Burnitz', 'C Javy Lopez', 'CF Timoniel Perez',
+    ]);
+    expect(staff('front-street-bombers')).toEqual([
+      '2000 Shane Reynolds', '2000 David Wells', '2003 Kevin Millwood', '2002 Wade Miller', '2000 John Halama',
+      '2000 Troy Percival', '2001 Mike Fetters', '2000 Jason Grimsley', '2000 Doug Jones', '2001 Jim Mecir', '2004 Danys Baez',
+    ]);
+    expect(order('homestead-grays')).toEqual([
+      'SS Omar Vizquel', 'RF Steve Finley', 'LF Tony Gwynn', '1B Jason Giambi', '2B Edgardo Alfonzo',
+      '3B Jose Vidro', 'C Jason LaRue', 'DH Will Clark', 'CF Terrence Long',
+    ]);
+    expect(staff('homestead-grays')).toEqual([
+      '2004 Roger Clemens', '2004 Mark Prior', '2004 Josh Beckett', '2004 Tom Glavine', "2001 Jeff D'Amico",
+      '2000 Scott Williamson', '2001 Robb Nen', '2001 Gabe White', '2001 Rich Garces', '2000 Mike Timlin', '2000 Pat Rapp',
+    ]);
+    // The named sets: Harden's Trading Deadline, Hoffman's and Glavine's Super Season cards.
+    expect(['2005-TD-30', '2002-PR-121', '2004-TD-110'].every((id) => id in CARDS_BY_ID)).toBe(true);
+  });
+
+  it('has the Aviators through the Smoke Jumpers as given', () => {
+    // Each lineup in batting order as slot, year and name; then rotation, bullpen and bench.
+    const given: Record<string, [string[], string[]]> = {
+      aviators: [
+        [
+          'SS 2001 Mike Bordick', 'LF 2000 Dante Bichette', '1B 2000 Rafael Palmeiro', 'DH 2000 Albert Belle',
+          '3B 2000 Ryan Klesko', 'RF 2000 Ben Grieve', 'CF 2000 Geoff Jenkins', 'C 2000 Brent Mayne', '2B 2001 Todd Walker',
+        ],
+        [
+          '2000 Denny Neagle', '2005 Odalis Perez', '2001 Chan Ho Park', '2000 Alex Fernandez', '2000 Kirk Rueter',
+          '2001 Aaron Fultz', '2000 Turk Wendell', '2004 Mike Stanton', '2001 Matt Mantei', '2001 Rick Aguilera',
+          '2000 Kevin McGlinchy',
+        ],
+      ],
+      railroaders: [
+        [
+          '2B 2000 Ron Belliard', 'LF 2000 Alex Ochoa', 'RF 2001 Richard Hidalgo', 'DH 2001 Manny Ramirez', '3B 2000 Mo Vaughn',
+          '1B 2000 John Olerud', 'C 2001 Ramon Hernandez', 'SS 2000 Kevin Stocker', 'CF 2000 Darren Lewis',
+        ],
+        [
+          '2001 Jon Lieber', '2003 Livan Hernandez', '2000 Pete Harnisch', '2000 Jason Schmidt', '2000 Orel Hershiser',
+          '2000 John Wetteland', '2000 Bob Wickman', '2000 Brad Clontz', '2001 Mark Guthrie', '2001 Kevin Walker',
+          '2004 Rheal Cormier', '2001 Greg Colbrunn', '2002 Rey Ordonez',
+        ],
+      ],
+      'big-ws': [
+        [
+          'CF 2000 Doug Glanville', 'DH 2000 Kevin Young', 'RF 2000 Ellis Burks', 'LF 2001 Moises Alou', '3B 2001 Ken Caminiti',
+          'C 2000 Mike Lieberthal', 'SS 2001 Travis Fryman', '1B 2000 Rico Brogna', '2B 2000 Eric Young',
+        ],
+        [
+          '2004 Bartolo Colon', '2000 Sterling Hitchcock', '2002 Javier Vazquez', '2005 Wilson Alvarez', '2004 Shawn Chacon',
+          '2002 Paul Shuey', '2000 Armando Benitez', '2000 Bob Howry', '2000 Brian Moehler', '2000 Mike Trombley',
+          '2000 C.J. Nitkowski', '2000 Alex Gonzalez',
+        ],
+      ],
+      'ninja-turtles': [
+        [
+          'CF 2002 Carlos Beltran', 'RF 2000 Al Martin', 'LF 2000 Henry Rodriguez', '1B 2000 John Jaha', '3B 2000 Robin Ventura',
+          'C 2000 Eddie Taubensee', 'SS 2000 Jeff Blauser', '2B 2001 Damion Easley', 'DH 2000 Luis Polonia',
+        ],
+        [
+          '2000 Jose Lima', '2003 Pat Hentgen', '2004 Steve Trachsel', '2001 Kevin Tapani', '2000 Todd Stottlemyre',
+          '2000 Steve Reed', '2000 Mike Magnante', '2000 Dan Plesac', '2000 Scott Erickson', '2002 Steve Karsay',
+          '2000 Jesse Orosco', '2000 Wally Joyner',
+        ],
+      ],
+      'hot-gloves': [
+        [
+          '2B 2002 Jimmy Rollins', 'CF 2002 Mark Kotsay', '1B 2002 Jose Hernandez', 'RF 2000 Reggie Sanders',
+          'DH 2000 Harold Baines', '3B 2001 Rich Aurilia', 'C 2004 Mike Matheny', 'LF 2000 Bubba Trammell',
+          'SS 2002 Royce Clayton',
+        ],
+        [
+          '2002 J.C. Romero', '2002 Steve Sparks', '2003 Mark Buehrle', '2005 Chris Carpenter', '2000 Armando Reynoso',
+          '2001 Todd Jones', '2004 Francisco Rodriguez', '2002 Kyle Farnsworth', '2002 Sean Lowe', '2000 Ron Villone',
+          '2000 Paul Byrd', '2002 Tony Womack', '2002 Rey Sanchez',
+        ],
+      ],
+      swashbucklers: [
+        [
+          'SS 2000 Barry Larkin', 'DH 2001 Magglio Ordonez', 'LF 2001 Vladimir Guerrero', '1B 2000 Carlos Delgado',
+          'C 2001 Charles Johnson', 'CF 2000 Rondell White', 'RF 2000 Raul Mondesi', '3B 2000 Dean Palmer',
+          '2B 2000 Fernando Vina',
+        ],
+        [
+          '2003 Esteban Loaiza', '2003 Tim Wakefield', '2003 Kyle Lohse', '2001 Al Leiter', '2004 Mark Redman',
+          '2001 Jose Jimenez', '2002 Steve Kline', '2004 Chad Cordero', '2000 Mark Petkovsek', '2001 Felix Rodriguez',
+          '2000 Graeme Lloyd', '2000 Warren Morris',
+        ],
+      ],
+      'los-gatos': [
+        [
+          '2B 2000 Luis Castillo', '1B 2000 Jeff Bagwell', 'CF 2001 Jim Edmonds', 'LF 2000 Juan Gonzalez',
+          '3B 2001 Fernando Tatis', 'DH 2000 Jim Thome', 'RF 2001 Rusty Greer', 'C 2001 Henry Blanco', 'SS 2000 Craig Biggio',
+        ],
+        [
+          '2005 Ben Sheets', '2002 Jose Rijo', '2003 Zach Day', '2003 Matt Morris', '2000 David Cone', '2001 Ramiro Mendoza',
+          '2001 Rick White', '2000 Terry Adams', '2001 Scott Strickland', '2001 Rod Beck', '2004 Curtis Leskanic',
+        ],
+      ],
+      pachyderms: [
+        [
+          'CF 2000 Kenny Lofton', 'C 2000 Jason Kendall', 'LF 2001 Johnny Damon', '1B 2001 Troy Glaus', 'RF 2001 Bobby Higginson',
+          '3B 2001 Scott Rolen', 'DH 2001 Tim Salmon', '2B 2000 Jose Offerman', 'SS 2001 Mark McLemore',
+        ],
+        [
+          '2002 Roy Halladay', '2004 Kenny Rogers', '2002 Bud Smith', '2003 Gil Meche', '2002 Shawn Estes', '2000 Bob Wells',
+          '2001 Felix Heredia', '2001 Kelly Wunsch', '2002 Danny Graves', '2002 Ricardo Rincon', '2002 John Franco',
+        ],
+      ],
+      'upper-deckers': [
+        [
+          'DH 2001 Matt Lawton', '2B 2001 Denny Hocking', 'LF 2001 John Vander Wal', 'RF 2001 Jose Guillen',
+          '1B 2000 Erubiel Durazo', '3B 2001 Mike Sweeney', 'CF 2001 Jay Payton', 'C 2001 Todd Pratt', 'SS 2001 Damian Jackson',
+        ],
+        [
+          '2001 Tony Armas Jr.', '2001 Rick Helling', '2001 Albie Lopez', '2000 Omar Daal', '2001 Kelvim Escobar',
+          '2004 Brad Lidge', '2002 Matt Anderson', '2001 Onan Masaoka', '2000 Hector Carrasco', '2001 Justin Speier',
+          '2002 Satoru Komiyama', '2001 Desi Relaford',
+        ],
+      ],
+      'cracker-jax': [
+        [
+          'LF 2001 J.D. Drew', 'CF 2001 Carl Everett', 'DH 2000 Mark Quinn', '1B 2000 Fred Mcgriff', 'RF 2001 Luis Gonzalez',
+          '3B 2000 Matt Williams', '2B 2000 Vinny Castilla', 'C 2001 Brad Ausmus', 'SS 2000 Tony Batista',
+        ],
+        [
+          '2000 Andy Ashby', '2003 Orlando Hernandez', '2005 Woody Williams', '2000 Jeff Suppan', '2003 Ted Lilly',
+          '2001 Todd Van Poppel', '2000 Tim Crabtree', '2002 Mike DeJean', '2001 Arthur Rhodes', '2000 Todd Ritchie',
+          '2001 Eddie Guardado',
+        ],
+      ],
+      interstellars: [
+        [
+          'SS 2000 Chuck Knoblauch', '2B 2000 Ray Durham', 'DH 2001 Sammy Sosa', '3B 2001 Phil Nevin', 'RF 2000 Greg Vaughn',
+          'CF 2000 Marvin Benard', 'C 2001 Todd Hundley', '1B 2001 J.T. Snow', 'LF 2001 Brady Anderson',
+        ],
+        [
+          '2000 Gil Heredia', '2005 Jake Peavy', '2000 Mike Sirotka', '2000 Jose Rosado', '2000 Dave Burba', '2000 John Rocker',
+          '2004 Damaso Marte', '2000 Scott Sauerbeck', '2001 Mark Wohlers', '2000 Greg Swindell', '2000 Steve Montgomery',
+          '2001 Pokey Reese',
+        ],
+      ],
+      dinos: [
+        [
+          'CF 2000 F.P. Santangelo', '1B 2000 Mark Grace', '3B 2001 Adrian Beltre', 'RF 2000 Matt Stairs',
+          'DH 2001 Trenidad Hubbard', '2B 2001 Derrek Lee', 'LF 2000 Troy OLeary', 'C 2001 Darrin Fletcher', 'SS 2000 Ed Sprague',
+        ],
+        [
+          '2002 Josh Towers', '2005 Matt Clement', '2000 Andy Benes', '2001 Ryan Dempster', '2000 Dave Mlicki',
+          '2003 Johan Santana', '2002 Victor Zambrano', '2002 Shigetoshi Hasegawa', '2000 Scott Sullivan', '2002 Ryan Drese',
+          '2002 Nelson Figueroa', '2000 Shannon Stewart', '2000 Scott Brosius', '2000 Mark Loretta', '2000 Carlos Lee',
+          '2000 Bernard Gilkey',
+        ],
+      ],
+      'smoke-jumpers': [
+        [
+          'DH 2001 Roger Cedeno', 'CF 2001 Mike Cameron', 'RF 2002 Garret Anderson', '1B 2001 Pat Burrell', '3B 2001 Paul Konerko',
+          'SS 2001 Joe Randa', 'C 2001 Chad Kreuter', '2B 2001 Julio Lugo', 'LF 2001 Rich Becker',
+        ],
+        [
+          '2001 Frank Castillo', '2001 Jesus Sanchez', '2002 Scott Schoeneweis', '2001 Rick Ankiel', '2001 Kris Benson',
+          '2002 Jose Mesa', '2003 D.J. Carrasco', '2003 Chris Hammond', '2003 Francisco Cordero', '2003 Joe Beimel',
+          '2002 Esteban Yan', '2001 Frank Catalanotto',
+        ],
+      ],
+    };
+    const label = (cardId: string | null) => `${CARDS_BY_ID[cardId as string].year} ${CARDS_BY_ID[cardId as string].name}`;
+    for (const [id, [lineup, staff]] of Object.entries(given)) {
+      const draft = savedTeamDraft(SAVED_TEAMS_BY_ID[id]);
+      expect(draft.lineup.map((e) => `${e.slot} ${label(e.cardId)}`), id).toEqual(lineup);
+      expect([...draft.rotation, ...draft.bullpen, ...draft.bench].map(label), id).toEqual(staff);
+    }
+    // Two lineups as sent put a hitter where his card can't play: Kevin Young, a 1B card, in right
+    // for the Big W's, and 2002 Tony Womack, a SS card, in left for the Hot Gloves.
+    expect(fieldingAt(CARDS_BY_ID['2000-BS-356'] as HitterCard, 'RF')).toBeNull();
+    expect(fieldingAt(CARDS_BY_ID['2002-BS-26'] as HitterCard, 'LF')).toBeNull();
+    // The named sets: Hentgen's Pennant Run Super Season, Franco's Super Season and Anderson's All-Star Game cards.
+    expect(['2003-PR-107', '2002-PR-92', '2002-ASG-1'].every((id) => id in CARDS_BY_ID)).toBe(true);
+  });
+
   it('cuts later charts off at 20 and keeps those cards out of the building pool', () => {
     const pool = new Set(ALL_CARDS.map((c) => c.id));
     const used = new Set(SAVED_TEAMS.flatMap((team) => draftCardIds(savedTeamDraft(team))));
@@ -379,6 +576,12 @@ describe('saved teams', () => {
     expect(playGame(chads, home, 9).winner).not.toBeNull();
     const wiffle = toTeamSetup(savedTeamDraft(SAVED_TEAMS_BY_ID.wiffleballers));
     expect(playGame(wiffle, chads, 10).winner).not.toBeNull();
+    const [peace, bombers, grays] = ['peacemakers', 'front-street-bombers', 'homestead-grays'].map((id) => toTeamSetup(savedTeamDraft(SAVED_TEAMS_BY_ID[id])));
+    expect(playGame(peace, bombers, 11).winner).not.toBeNull();
+    expect(playGame(grays, peace, 12).winner).not.toBeNull();
+    expect(playGame(bombers, grays, 13).winner).not.toBeNull();
+    const added = ['aviators', 'railroaders', 'big-ws', 'ninja-turtles', 'hot-gloves', 'swashbucklers', 'los-gatos', 'pachyderms', 'upper-deckers', 'cracker-jax', 'interstellars', 'dinos', 'smoke-jumpers'].map((id) => toTeamSetup(savedTeamDraft(SAVED_TEAMS_BY_ID[id])));
+    added.forEach((team, i) => expect(playGame(team, added[(i + 1) % added.length], 14 + i).winner, String(i)).not.toBeNull());
   });
 });
 

@@ -1,5 +1,5 @@
 // Turns the raw card snapshot into the card list the game ships with.
-// Scope is the regular 2000 and 2001 sets, plus the few later cards our saved
+// Scope is the regular 2000 and 2001 sets, plus the later cards our saved
 // teams use. Run with: npm run cards
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -40,6 +40,110 @@ const OTHER_YEAR_CARDS = new Set([
   '2004-BS-77', // Tom Gordon
   '2005-BS-136', // Tim Spooneybarger
   '2005-BS-184', // Scott Podsednik
+  // Peacemakers
+  '2002-BS-152', // Roy Oswalt
+  '2002-PR-29', // Vicente Padilla
+  '2002-PR-121', // Trevor Hoffman (Super Season)
+  '2004-BS-184', // Paul Quantrill
+  '2004-BS-198', // LaTroy Hawkins
+  '2004-BS-347', // Vernon Wells
+  '2005-BS-95', // Coco Crisp
+  '2005-TD-30', // Rich Harden
+  // Front Street Bombers
+  '2002-BS-151', // Wade Miller
+  '2003-BS-34', // Kevin Millwood
+  '2004-BS-97', // Danys Baez
+  // Homestead Grays
+  '2003-BS-16', // Steve Finley
+  '2004-BS-68', // Mark Prior
+  '2004-BS-93', // Jason LaRue
+  '2004-BS-132', // Josh Beckett
+  '2004-BS-226', // Roger Clemens
+  '2004-TD-110', // Tom Glavine (Super Season)
+  // Aviators
+  '2004-PR-39', // Mike Stanton (Pennant Run)
+  '2005-TD-110', // Odalis Perez (Trading Deadline)
+  // Railroaders
+  '2002-BS-218', // Rey Ordonez (base set, NYM)
+  '2003-PR-67', // Livan Hernandez (Pennant Run)
+  '2004-BS-256', // Rheal Cormier
+  // Big W's
+  '2002-BS-108', // Paul Shuey (base set, CLE)
+  '2002-BS-209', // Javier Vazquez
+  '2004-BS-112', // Shawn Chacon (base set, COL)
+  '2004-TD-99', // Bartolo Colon (Trading Deadline)
+  '2005-BS-163', // Wilson Alvarez (base set, LAD)
+  // Ninja Turtles
+  '2002-BS-156', // Carlos Beltran (base set, KCR)
+  '2002-TD-119', // Steve Karsay (Trading Deadline)
+  '2003-PR-107', // Pat Hentgen (Pennant Run Super Season)
+  '2004-PR-41', // Steve Trachsel (Pennant Run)
+  // Hot Gloves
+  '2002-BS-26', // Tony Womack
+  '2002-BS-37', // Rey Sanchez (base set, ATL)
+  '2002-BS-63', // Kyle Farnsworth
+  '2002-BS-76', // Royce Clayton
+  '2002-BS-84', // Sean Lowe (base set, CHW)
+  '2002-BS-129', // Steve Sparks
+  '2002-BS-182', // Jose Hernandez (base set, MIL)
+  '2002-BS-260', // Jimmy Rollins (base set, PHI)
+  '2002-BS-278', // Mark Kotsay (base set, SDP)
+  '2002-PR-1', // J.C. Romero (Pennant Run)
+  '2003-BS-76', // Mark Buehrle
+  '2004-BS-312', // Mike Matheny
+  '2004-TD-90', // Francisco Rodriguez (Trading Deadline)
+  '2005-BS-305', // Chris Carpenter (base set, STL)
+  // Swashbucklers
+  '2002-BS-312', // Steve Kline
+  '2003-PR-82', // Kyle Lohse (Pennant Run)
+  '2003-PR-101', // Esteban Loaiza (Pennant Run)
+  '2003-TD-122', // Tim Wakefield (Trading Deadline)
+  '2004-BS-141', // Mark Redman
+  '2004-TD-83', // Chad Cordero (Trading Deadline)
+  // Los Gatos
+  '2002-PR-10', // Jose Rijo (Pennant Run; there's no base-set card)
+  '2003-BS-276', // Matt Morris
+  '2003-PR-87', // Zach Day (Pennant Run)
+  '2004-BS-165', // Curtis Leskanic
+  '2005-BS-196', // Ben Sheets
+  // Pachyderms
+  '2002-BS-92', // Danny Graves
+  '2002-BS-106', // Ricardo Rincon
+  '2002-BS-284', // Shawn Estes (base set, SFG)
+  '2002-BS-319', // Bud Smith
+  '2002-PR-92', // John Franco (Pennant Run Super Season)
+  '2002-TD-118', // Roy Halladay (Trading Deadline; no base-set card)
+  '2003-PR-84', // Gil Meche (Pennant Run)
+  '2004-PR-53', // Kenny Rogers (Pennant Run, All-Star edition)
+  // Upper Deckers
+  '2002-BS-121', // Matt Anderson
+  '2002-TD-148', // Satoru Komiyama (Trading Deadline)
+  '2004-BS-155', // Brad Lidge
+  // Cracker Jax
+  '2002-BS-180', // Mike DeJean
+  '2003-PR-58', // Ted Lilly (Pennant Run)
+  '2003-TD-120', // Orlando Hernandez (Trading Deadline)
+  '2005-TD-141', // Woody Williams (Trading Deadline)
+  // Interstellars
+  '2004-BS-80', // Damaso Marte
+  '2005-BS-280', // Jake Peavy
+  // Dinos
+  '2002-BS-49', // Josh Towers
+  '2002-BS-256', // Nelson Figueroa
+  '2002-PR-6', // Shigetoshi Hasegawa (Pennant Run)
+  '2002-PR-36', // Ryan Drese (Pennant Run)
+  '2002-TD-116', // Victor Zambrano (Trading Deadline)
+  '2003-TD-108', // Johan Santana (Trading Deadline)
+  '2005-TD-134', // Matt Clement (Trading Deadline)
+  // Smoke Jumpers
+  '2002-ASG-1', // Garret Anderson (All-Star Game)
+  '2002-BS-10', // Scott Schoeneweis
+  '2002-BS-331', // Esteban Yan
+  '2002-TD-117', // Jose Mesa (Trading Deadline)
+  '2003-PR-20', // Chris Hammond (Pennant Run)
+  '2003-PR-32', // Joe Beimel (Pennant Run)
+  '2003-PR-40', // Francisco Cordero (Pennant Run)
+  '2003-PR-47', // D.J. Carrasco (Pennant Run)
 ]);
 const CHART_COLUMNS = ['PU', 'SO', 'GB', 'FB', 'BB', '1B', '1B+', '2B', '3B', 'HR'];
 const ROLES = { STARTER: 'Starter', RELIEVER: 'Reliever', CLOSER: 'Closer' };
